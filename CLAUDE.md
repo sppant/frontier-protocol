@@ -2,88 +2,82 @@
 
 ## Overview
 
-Single-player, real-time space strategy game in the browser. Year 2479: an ancient spacetime network (the **Nexus**) is found across unexplored systems. The player leads one of four factions (Terran Directorate, Helion Collective, Veydran Dominion, The Oracles) against three deterministic bots. Loop: explore → expedition → discover → colonize → produce → research → expand → compete → uncover the Nexus mystery. Real-time with pause and speed (1×/2×/4×). No backend, no accounts, no AI APIs.
+Single-player, real-time space strategy game in the browser. Year 2479: an ancient spacetime network (the **Nexus**) is found across 16 star systems. The player leads one of four factions (Terran Directorate, Helion Collective, Veydran Dominion, The Oracles) against three deterministic bots. Loop: explore → expedition → discover → colonize → produce → research → expand → compete → uncover the Nexus. Real time with pause and 1×/2×/4× speed. No backend, no accounts, no AI APIs; bots are plain utility AI and work offline.
 
 ## Stack
 
-React 19 · TypeScript (pinned `~6.0`: typescript-eslint doesn't support TS 7 yet) · Vite 8 · Zustand · React Three Fiber + Three + Drei · ECharts · CSS Modules + CSS tokens · Vitest + React Testing Library · Playwright · ESLint + Prettier. Save data: IndexedDB (planned).
+React 19 · TypeScript (pinned `~6.0`: typescript-eslint doesn't support TS 7 yet) · Vite 8 (Rolldown) · Zustand · React Three Fiber + Three + Drei · CSS Modules + CSS tokens · Vitest + React Testing Library · Playwright (+ axe-core) · ESLint + Prettier · IndexedDB for saves · ECharts (tree-shaken, lazy) for the standings chart.
 
 ## Architecture (`src/`)
 
-- `domain/` — entity types, constants, static data (factions, buildings, techs). No logic dependencies on React.
-- `sim/` — pure, deterministic simulation: seeded RNG, tick, resources, colonies, fleets, research, events, victory. No React/DOM.
-- `bots/` — utility-based bot decision engine (pure; consumes sim state, returns actions + decision log).
-- `store/` — Zustand stores bridging sim ↔ UI. Game logic stays out of stores/components.
-- `persistence/` — versioned save schema, validation, migrations, IndexedDB adapter.
-- `render/` — React Three Fiber galaxy scene; reads state, emits selection only.
-- `ui/primitives` — design-system components (Button, Panel, StatusDot…); `ui/layout` — shell, top bar, panels.
-- `styles/` — `tokens.css` (colors, spacing, type) and `global.css`.
-- `e2e/` — Playwright specs. Unit tests live beside code as `*.test.ts(x)`.
-- Import alias `@/` → `src/`.
+Dependency direction: `domain` ← `sim` ← `bots` ← `engine` ← `store` ← `ui`/`render`. `sim/` never imports bots, stores or React.
 
-## Simulation rules (current)
+- `domain/` — types and static data: factions (+ modifiers), buildings, techs, events/story, bot types, `GameState` (`game.ts`).
+- `sim/` — pure deterministic rules: seeded `rng`, `galaxyGen`, `state` (createGame), `tick`, `economy`, `commands` (colonize/build), `fleets` (expeditions), `research`, `events`, `victory`, `modifiers`, `clock`.
+- `bots/` — utility AI: `personalities` (weights, difficulty), `candidates` (legal actions + scoring), `decide` (decision round, objective, log).
+- `engine/step.ts` — composes `tick` + bots: `step`, `advanceGame` (stops at a pending decision/victory), `newGame`, `withBots`. **Always run games through the engine**; `sim/tick` alone has no bots.
+- `persistence/` — save envelope + `validate.ts` + `migrate`, `storage.ts` (IndexedDB/memory), `saveGame.ts`, `autosave.ts`.
+- `store/` — Zustand: `gameStore` (authoritative `GameState` + command wrappers), `selectionStore`, `clockStore`, `viewStore` (tabs/tutorial/settings/render mode), `appStore` (screen, save status), `gameLoop` (wall-clock driver), `session` (boot/new/continue/quit/autosave wiring), `selectors`.
+- `render/` — R3F `GalaxyScene` (lazy), 2D `SimpleMap` fallback, `GalaxyMap` switcher, shared `visuals`.
+- `ui/` — `primitives/` (Button, Panel, Tabs, Dialog, StatusDot), `layout/` (AppShell, TopBar, SidePanel), `panels/` (inspector, research, objectives + `ScoreChart`, feed, dialogs), `screens/` (menu, new game, settings, onboarding).
+- `styles/` tokens + global; `e2e/` Playwright specs; unit tests sit beside code (`*.test.ts(x)`). Alias `@/` → `src/`.
 
-- 1 tick = 1 game day; 1× speed = 1 tick/second (`TICK_MS`), 2×/4× scale it; paused = no ticks. Catch-up capped at 30 ticks/step.
-- Tick order: income & upkeep (from start-of-tick state) → construction → population growth → `tick++` → fleet movement → events → victory check; then (engine) bot decisions. Credits clamp at 0 and set `deficit` (one event on entry).
-- Resources: credits (tax 0.5/pop, trade hub), minerals (mine: 2 + planet richness), research (lab: 1 + 0.25/pop). Colony upkeep 1¢ + 0.5¢/building. Faction `modifiers` (`domain/factions.ts`) scale output, colony cost, growth and upkeep.
-- Colonize: planet habitability ≥ 20, system explored, not controlled by another faction, in/adjacent to own territory, cost 120¢ + 60⛏ × faction `colonyCost`. Colonization is instant for now; Phase 4 will route it through expeditions/fleets.
-- Expeditions: target must be `detected` (adjacent to explored); cost 40¢; scout flies from the nearest owned system along hyperlanes at 3 units/tick (≥1 tick/hop); consumed on arrival. Fleets move _after_ the economy step in a tick.
-- Build queue max 3 per colony; each building once per colony; cost paid up-front.
-- Events: story events fire in order at days 1/40/90/150/220/300 (chapters First Contact…Convergence); random events roll every 12 days at 40%, each once per game, using `GameState.rngState`. Events affect the player only (bots don't receive/decide events). One pending event at a time; choices must be affordable.
-- Tech: instant unlock on payment (no queue); unique tech per faction; modifiers are base × product of tech multipliers.
-- Victory (checked every tick, first in faction order wins ties): Ascendancy (capstone tech), Dominion (≥10 owned systems), Hegemony (best `score` = 10/system + pop + 5/tech at day 720). `tick` is a no-op once `victory` is set.
+## Simulation rules
 
-## Bot rules (current)
+- 1 tick = 1 game day; 1× = 1 tick/second (`TICK_MS`). Catch-up capped at 30 ticks/step. `advanceGame` halts the moment a player decision is pending or the match ends; the loop pauses the clock synchronously.
+- Tick order: income & upkeep → construction → population growth → `tick++` → fleet movement → events → victory check; then (engine) bot decisions. Credits clamp at 0 (`deficit` flag + one event).
+- Resources: credits (tax 0.5/pop; trade hub 2 + 0.4/pop), minerals (mine: 2 + planet richness; **minerals come only from mines**), research (lab: 1 + 0.12/pop). Upkeep 1¢/colony + 0.5¢/building. Faction `modifiers` and tech multipliers (`sim/modifiers.ts#modifiersFor`) scale everything.
+- Colonize (instant): habitability ≥ 20, system explored by you, not another faction's, in/adjacent to your territory; 120¢ + 60⛏ × `colonyCost`. Build queue ≤ 3/colony, each building once.
+- Exploration is per faction (`SystemState.exploration[faction]`, `explorationOf`). Expedition: target `detected`, 40¢, scout flies hyperlanes (Dijkstra) at 3 × `fleetSpeed` units/tick, surveys on arrival (reveals neighbours within `surveyReach` hops; anomalies pay +25 research).
+- Events: six story events at days 1/40/90/150/220/300 (chapters First Contact → Convergence); random events roll every 12 days at 40%, once each, via `GameState.rngState`. Player-only; one pending at a time.
+- Victory (all factions, checked every tick): **Ascendancy** — research the capstone (10 000 research, needs story stage 6 / day 300) → a public 100-day Nexus Attunement; **Dominion** — own ≥ 8 of 16 systems; **Hegemony** — best `score` (10/system + pop + 5/tech) on day 720. Scores are sampled every 10 days into `GameState.history` (max 100) for the chart. `tick` is a no-op once `victory` is set.
 
-- Layering: `bots/` depends on `sim/`; `sim/` never imports bots. Always run the game through `engine/step.ts` (`advanceGame`/`newGame`); `sim/tick` alone has no bots.
-- Personalities: Pioneer (explore/expand), Merchant (economy), Warlord (contested frontier + minerals; no combat exists yet, so "military" = territorial claims), Oracle (research, safe interior, Ascendancy). Default per faction: terran=merchant, helion=pioneer, veydran=warlord, oracle=oracle; the player's faction gets no bot.
-- Difficulty (no resource bonuses): easy = decide every 10d, 1 action, ±35% score noise, no reserve, no objective; normal = 6d, 2 actions, ±12%, 20¢ reserve, objective; hard = 4d, 3 actions, no noise, 40¢ reserve, objective (+ capstone-chain bonus for Ascendancy).
-- Safeguards learned from simulation: keep one mine's worth of minerals until a mine exists (minerals only come from mines); max 2 concurrent expeditions; no colonizing into a credit deficit; minimum utility 0.2; bots hold their turn while a player decision is pending.
-- Decisions are due at `nextDecisionTick` (staggered per faction), never per frame.
-- Ascendancy: capstone research starts a public 100-day Nexus Attunement (`attunementDone`); first to complete wins. Gated to story stage 6 (day 300). Lab output was tuned down (1 + 0.12/pop) after headless sims showed research hoarding.
-- Balance notes (headless 720-day sims, 10 seeds): bots reach the capstone at ~day 300 and win Ascendancy ~day 400 if unopposed; the map saturates (all habitable planets claimed) by ~day 200, so early claiming decides Dominion. Phase 8 should re-tune against human play.
+## Bots
 
-## Persistence (current)
+- Personalities: Pioneer (explore/expand), Merchant (economy), Warlord (contested frontier + minerals; there is no combat, so "military" = territorial claims), Oracle (research, safe interior, Ascendancy). Default by faction: terran=merchant, helion=pioneer, veydran=warlord, oracle=oracle; the player's faction has no bot.
+- Difficulty changes decision quality only, never resources: easy = every 10d, 1 action, ±35% score noise, no reserve, no objective; normal = 6d, 2 actions, ±12%, 20¢ reserve, objective; hard = 4d, 3 actions, no noise, 40¢ reserve, objective + capstone-chain bonus.
+- Bots use the same validated commands as the player. `GameState.bots[f]` holds personality, difficulty, private `rngState`, `nextDecisionTick` (staggered), objective and a capped decision `log` (label, utility, top-2 factors, 3 alternatives) shown in the feed's "Rival activity" tab.
+- Safeguards found via headless simulation: keep one mine's worth of minerals until a mine exists; ≤ 2 concurrent expeditions; no colonizing into a deficit; min utility 0.2; bots wait while a player decision is pending.
+- Balance (24 headless 720-day matches, hard "player" vs normal bots): ~60% end by Ascendancy (day ~400–640), ~40% by Hegemony (day 720); expansion-heavy play tends to win Hegemony, research-heavy play Ascendancy. Habitable planets are all claimed by ~day 200, so early claiming matters. Dominion (8 systems) is reachable but rarely hit by bots (max seen 7).
 
-- One slot, `autosave`, in IndexedDB db `frontier-protocol` / store `saves`. If IndexedDB is unavailable, falls back to memory and the menu warns that progress won't persist.
-- Autosave: routine save at most every 5 s while a match is on screen and the state changed; immediate flush on: new match, event decision, victory, pausing, tab hidden/`pagehide`, Settings → Save now, quit to menu. Writes never overlap (coalesced).
-- Saves are validated on load (types, ranges, references). Invalid/unsupported saves surface as a menu notice with "Discard broken save"; they never crash the app. Saves from a newer version are rejected.
-- **Changing the shape of `GameState` ⇒ bump `SAVE_VERSION` (domain/game.ts) and add `MIGRATIONS[oldVersion]` in `persistence/save.ts`**, plus a test. `validateGameState` must be updated with every new field.
-- Round-trip determinism is tested: load(save(x)) continues identically to x.
-- Tutorial-seen flag lives in localStorage (`fp.tutorialSeen`), a per-device convenience only.
+## Persistence
 
-## Map ↔ state boundary
+- One slot `autosave` in IndexedDB (`frontier-protocol` / `saves`); memory fallback (menu warns) if unavailable.
+- Autosave ≤ every 5 s when dirty, plus immediate flush on new match, event decision, victory, pause, tab hide/`pagehide`, Save now, quit to menu. Writes never overlap.
+- Saves are validated on load (types, ranges, references); bad/unsupported/newer saves show a menu notice with "Discard broken save" and never crash.
+- Save format is currently **v2** (v1 → v2 added `history`; this migration is real and tested with a v1-shaped fixture).
+- **Changing `GameState` ⇒ bump `SAVE_VERSION` (`domain/game.ts`), add `MIGRATIONS[oldVersion]` in `persistence/save.ts`, update `validate.ts`, add a test.**
+- Tutorial-seen flag: localStorage `fp.tutorialSeen` (convenience only).
 
-Renderers read `useGameStore((s) => s.game.galaxy / .systemStates)` and only call `useSelectionStore` `select`/`hover`. `GalaxyScene` is lazy-loaded (keeps three.js out of the main chunk and out of jsdom tests). Unknown systems are anonymous in UI (`displayName`). Shared visual constants live in `render/visuals.ts`; faction colors in `domain/factions.ts` (mirror `--faction-*` tokens).
+## UI conventions
 
-## Conventions
+- Dark console look; one amber accent (`--accent`); faction colours (`domain/factions.ts`, mirrored in `--faction-*`) are the only other hues. Use tokens from `styles/tokens.css`; muted text is `--text-2` (kept AA-contrast).
+- No dead controls: omit or disable-with-reason (disabled buttons expose the reason via `title`/text). Respect `prefers-reduced-motion`. Keyboard-reachable scroll regions (`Panel` body has `tabIndex=0`). Unknown systems stay anonymous (`displayName`).
+- Map ↔ state: renderers read the game store and only call `selectionStore` `select`/`hover`. `GalaxyScene` is lazy so three.js stays out of the main chunk and jsdom tests. Module-level shared geometries/materials are intentional singletons; per-component textures are disposed.
+- Layout: grid on desktop; ≤ 800 px stacks map / side panel / feed. The top bar wraps; e2e asserts no horizontal overflow at 390/768/1024/1440 px.
 
-- Strict TS, no `any`. Pure functions for rules. Stable string IDs for entities.
-- All gameplay randomness via the seeded RNG; same seed + same actions ⇒ same result.
-- Simulation advances by fixed ticks driven by a game clock, independent of `requestAnimationFrame`. Bots decide on defined tick intervals, never per frame.
-- Save data is versioned; every format change adds a migration.
-- UI: dark console look, single amber accent (`--accent`); faction colors are the only other hues. No dead controls — omit or mark unavailable.
-- Respect `prefers-reduced-motion`.
+## Testing & commands
 
-## Commands
+`npm run dev` · `npm run build` · `npm run check` (typecheck + lint + format:check + unit/integration) · `npm run test:e2e` (builds, serves preview on :4173, runs Playwright incl. axe a11y; first run: `npx playwright install chromium`).
 
-`npm run dev` · `npm run build` · `npm run check` (typecheck + lint + format:check + unit tests) · `npm run test:e2e` (builds + Playwright; first run needs `npx playwright install chromium`).
+- Unit tests are deterministic (seeded). Headless bot matches double as balance probes; there are no committed balance assertions beyond invariants, so re-run a probe (play 700+ days with `withBots` for all factions across seeds) after touching economy/bot/victory numbers.
+- e2e helpers: `startMatch`, `resolveDialog`, `runUntil` (e2e/helpers.ts). New e2e tests must tolerate story/random event dialogs.
+- Playwright `webServer` runs `npm run build` (includes `tsc`): an unused import in an e2e file fails the whole run with no test output.
 
 ## Git workflow
 
-Remote `origin` = https://github.com/sppant/frontier-protocol.git, branch `main`. Commit and push after every completed task (conventional commits). Never force-push, no secrets/build artifacts, no co-author trailers. Run `npm run check` before committing.
+Remote `origin` = https://github.com/sppant/frontier-protocol.git, branch `main`. One coherent task per commit, pushed immediately; conventional commits; no force-push, no secrets/build artifacts, no co-author trailers. Run `npm run check` (and e2e for UI/sim changes) before committing.
 
 ## Status
 
-- [x] Phase 1 foundation: tooling, tokens, primitives, app shell with working pause/speed controls (placeholder map/panels are clearly labeled).
-- [x] Phase 2 galaxy visualization: seeded RNG + deterministic `generateGalaxy` (16 systems, hyperlanes, 4 capitals), `galaxyStore` (galaxy, per-system `SystemState`, selection/hover), R3F scene (instanced stars, lanes, territory rings, selection ring, starfield, nebulae, OrbitControls), 2D SVG `SimpleMap` fallback (no WebGL / player toggle), `SystemInspector`. Ownership/exploration is initial state only; sim will mutate it.
-- [x] Phase 3 simulation core: `GameState` (serializable, `domain/game.ts`), `createGame(seed, faction)`, pure `tick`/`advance`, economy (`colonyReport`/`factionReport`, logistic population growth), commands (`checkColonize`/`colonize`, `checkBuild`/`startConstruction`), wall-clock `advanceClock` driven by `store/gameLoop.ts` (setInterval 100ms, not rAF). `gameStore` holds the state; `selectionStore` holds map selection. Top bar shows resources + net/day + day counter; inspector offers Colonize/Build with reasons on disabled buttons.
-- [x] Phase 4a exploration: fog of war is **per faction** (`SystemState.exploration: Record<FactionId, ExplorationStatus>`; read via `explorationOf` / `useExploration()`), scout expeditions (`sim/fleets.ts`: Dijkstra `findPath`, `checkExpedition`/`launchExpedition`, `advanceFleets`, `fleetEta`/`fleetPosition`/`fleetRoute`), survey reveals the system + detects neighbours, anomalies pay research. `EventFeed` (player events + active expeditions), fleet markers in 3D and SVG maps.
-- [x] Phase 4b progression: techs (`domain/techs.ts`, bought with the research stockpile; effects multiply faction modifiers via `sim/modifiers.ts#modifiersFor`; capstone `nexusAttunement` gated by story stage 5), story chapters + random events with choices (`domain/events.ts`, `sim/events.ts`; seeded `rngState` lives in `GameState`), victory (`sim/victory.ts`: Ascendancy / Dominion 10 systems / Hegemony score at day 720; applies to every faction). UI: tabbed `SidePanel` (Inspector/Research/Objectives), `Dialogs` (event + victory). Game loop auto-pauses on pending event / victory; Resume is disabled meanwhile.
-- [x] Phase 5 bots: `bots/` (pure utility AI: `personalities.ts` weights + difficulty defs, `candidates.ts` legal-action generation & scoring, `decide.ts` decision round + objective + log) and `engine/step.ts` (`step` = `tick` then bots; `advanceGame` stops at a pending decision/victory; `newGame`/`withBots`). Bots act only via the same commands as the player (colonize/build/research/expedition). `GameState.bots[faction]` holds personality, difficulty, private `rngState`, `nextDecisionTick`, objective, capped decision `log` (label, utility, top-2 factors, 3 alternatives). UI: "Rival activity" feed tab.
-- [x] Phase 7a persistence & start flow: `persistence/` (`validate.ts` runtime validator w/ referential integrity → `SaveError`; `save.ts` envelope `{format, version, savedAt, game}` + `migrate` chain; `storage.ts` `SaveStore` = `IndexedDbStore` | `MemoryStore` fallback; `saveGame.ts` never-throws `loadGame` → none/ok/corrupt; `autosave.ts` throttled non-overlapping `Autosaver`), `store/session.ts` orchestration (`bootSession`, `startNewGame`, `continueGame`, `quitToMenu`, `startAutosave`), `appStore` (screen: boot/menu/setup/game, save summary/status), screens `MainMenu`/`NewGameScreen`/`SettingsDialog`/`Onboarding`.
-- [ ] Phase 4 (rest) gameplay · Phase 5 bots · Phase 6 full UI · Phase 7 persistence/polish · Phase 8 verification.
+All eight planned phases are implemented: foundation, galaxy map, simulation, exploration/tech/events/victory, bots, UI, persistence/onboarding, and polish/verification (a11y audit, responsive layout, balance pass, end-game e2e).
 
-## Known limitations / next
+## Known limitations / ideas
 
-No combat/diplomacy; single save slot; no cross-device sync; no persistence yet; WebGL canvas itself is verified only via Playwright (jsdom has no WebGL). Vite 8 uses Rolldown, so `manualChunks` object form is unsupported; revisit chunk splitting if bundle size matters.
+- No combat, diplomacy or trade; Warlord is territorial only. Events affect only the player.
+- Single save slot, no export/import, no cross-device sync.
+- Colonization is instant (no colony ships); tech unlock is instant (no research queue).
+- Rival decision logs are fully visible to the player (transparency, not fog of war).
+- Balance is a first pass tuned by simulation, not by human playtesting. Dominion is rarely hit by bots.
+- Initial 3D scene setup costs ~0.6 s of main-thread time (measured under software GL); the three/drei chunk is ~257 kB gzip and lazy-loaded. Importing specific drei modules could shrink it.
+- Storybook was deliberately skipped (primitives are few and covered by tests).

@@ -65,6 +65,7 @@ export function createGame(seed: number, playerFaction: FactionId): GameState {
     storyStage: 0,
     victory: null,
     bots: {},
+    history: [],
   };
 }
 

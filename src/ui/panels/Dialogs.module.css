@@ -23,3 +23,8 @@
 .error {
   color: var(--danger);
 }
+
+.endActions {
+  display: flex;
+  gap: var(--sp-3);
+}

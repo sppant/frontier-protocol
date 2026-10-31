@@ -4,6 +4,7 @@
   justify-content: center;
   gap: var(--sp-2);
   height: 28px;
+  white-space: nowrap;
   padding: 0 var(--sp-3);
   background: var(--bg-2);
   border: 1px solid var(--line);

@@ -15,8 +15,19 @@ export interface SaveEnvelope {
 /** Upgrades raw save data one version at a time: key = version it upgrades *from*. */
 export type Migrations = Record<number, (envelope: SaveEnvelope) => SaveEnvelope>;
 
-/** Registered migrations. Empty until the first format change after release. */
-export const MIGRATIONS: Migrations = {};
+/**
+ * Registered migrations (key = version upgraded *from*).
+ * v1 → v2: standings history was added to GameState.
+ */
+export const MIGRATIONS: Migrations = {
+  1: (env) => {
+    const game =
+      typeof env.game === 'object' && env.game !== null
+        ? { ...(env.game as Record<string, unknown>), version: 2, history: [] }
+        : env.game; // not an object: leave it for validation to reject
+    return { ...env, version: 2, game };
+  },
+};
 
 export function encodeSave(game: GameState, now: Date = new Date()): SaveEnvelope {
   return { format: SAVE_FORMAT, version: CURRENT_SAVE_VERSION, savedAt: now.toISOString(), game };

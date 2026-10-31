@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react';
 import { FACTIONS, FACTION_IDS } from '@/domain/factions';
 import { CHAPTERS } from '@/domain/events';
 import { score, systemsOwned, victoryProgress } from '@/sim/victory';
@@ -5,11 +6,14 @@ import { useGameStore } from '@/store/gameStore';
 import { Panel } from '@/ui/primitives';
 import styles from './ObjectivesPanel.module.css';
 
-function Bar({ value, max }: { value: number; max: number }) {
+const ScoreChart = lazy(() => import('./ScoreChart'));
+
+function Bar({ value, max, label }: { value: number; max: number; label: string }) {
   return (
     <div
       className={styles.bar}
       role="progressbar"
+      aria-label={label}
       aria-valuenow={value}
       aria-valuemin={0}
       aria-valuemax={max}
@@ -46,7 +50,11 @@ export function ObjectivesPanel() {
               {p.ascendancy.techsDone}/{p.ascendancy.techsNeeded}
             </span>
           </div>
-          <Bar value={p.ascendancy.techsDone} max={p.ascendancy.techsNeeded} />
+          <Bar
+            label="Ascendancy progress"
+            value={p.ascendancy.techsDone}
+            max={p.ascendancy.techsNeeded}
+          />
           <p className={styles.desc}>
             Research the chain to Nexus Attunement (unlocks at the Convergence), then hold on for
             the 100-day attunement.
@@ -64,7 +72,7 @@ export function ObjectivesPanel() {
               {p.dominion.owned}/{p.dominion.needed} systems
             </span>
           </div>
-          <Bar value={p.dominion.owned} max={p.dominion.needed} />
+          <Bar label="Dominion progress" value={p.dominion.owned} max={p.dominion.needed} />
           <p className={styles.desc}>
             Control {p.dominion.needed} systems by colonizing before rivals do.
           </p>
@@ -79,6 +87,11 @@ export function ObjectivesPanel() {
           </p>
         </li>
       </ul>
+
+      <h4 className="label">Score over time</h4>
+      <Suspense fallback={<p className={styles.desc}>Loading chart…</p>}>
+        <ScoreChart />
+      </Suspense>
 
       <h4 className="label">Standings</h4>
       <table className={styles.table} aria-label="Standings">

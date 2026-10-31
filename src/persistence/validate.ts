@@ -220,6 +220,15 @@ export function validateGameState(value: unknown): GameState {
     return v;
   });
 
+  // Standings history
+  arr(g.history, 'game.history').forEach((raw, i) => {
+    const p = `game.history[${i}]`;
+    const h = obj(raw, p);
+    nonNeg(h.tick, `${p}.tick`);
+    const scores = obj(h.scores, `${p}.scores`);
+    for (const f of FACTION_IDS) num(scores[f], `${p}.scores.${f}`);
+  });
+
   // Bots
   for (const [f, raw] of Object.entries(obj(g.bots, 'game.bots'))) {
     const p = `game.bots.${f}`;

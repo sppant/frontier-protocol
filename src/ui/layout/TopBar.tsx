@@ -89,7 +89,7 @@ export function TopBar() {
             key={s}
             active={speed === s}
             onClick={() => setSpeed(s)}
-            aria-label={`Speed ${s}x`}
+            aria-label={`${s}× speed`}
           >
             {s}×
           </Button>

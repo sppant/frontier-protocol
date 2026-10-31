@@ -3,7 +3,7 @@ import { FACTIONS } from '@/domain/factions';
 import { EVENTS_BY_ID } from '@/domain/events';
 import { checkEventChoice } from '@/sim/events';
 import { useGameStore } from '@/store/gameStore';
-import { useClockStore } from '@/store/clockStore';
+import { quitToMenu, startNewGame } from '@/store/session';
 import { Button, Dialog } from '@/ui/primitives';
 import styles from './Dialogs.module.css';
 
@@ -50,11 +50,11 @@ function EventDialog() {
 
 function VictoryDialog() {
   const game = useGameStore((s) => s.game);
-  const newGame = useGameStore((s) => s.newGame);
   const victory = game.victory;
   if (!victory) return null;
   const winner = FACTIONS[victory.winner];
   const won = victory.winner === game.playerFaction;
+  const difficulty = Object.values(game.bots)[0]?.difficulty ?? 'normal';
 
   return (
     <Dialog title={won ? 'Victory' : 'Defeat'}>
@@ -64,17 +64,19 @@ function VictoryDialog() {
       <p className={styles.text}>
         {won
           ? `Your faction prevailed on day ${victory.tick}.`
-          : `The match ended on day ${victory.tick}. Another faction reached the Nexus first.`}
+          : `The match ended on day ${victory.tick}. Another faction reached its goal first.`}
       </p>
-      <Button
-        variant="primary"
-        onClick={() => {
-          newGame(game.seed + 1, game.playerFaction);
-          useClockStore.setState({ paused: true, speed: 1 });
-        }}
-      >
-        Play again
-      </Button>
+      <div className={styles.endActions}>
+        <Button
+          variant="primary"
+          onClick={() =>
+            void startNewGame({ seed: game.seed + 1, faction: game.playerFaction, difficulty })
+          }
+        >
+          Play again (new galaxy)
+        </Button>
+        <Button onClick={() => void quitToMenu()}>Main menu</Button>
+      </div>
     </Dialog>
   );
 }

@@ -37,7 +37,7 @@ test('essential journey: new match → inspect → act → advance → save → 
   await expect(page.getByText(/Building Mining Complex/)).toBeVisible();
 
   // 7–8. Advance time and verify the game state changes.
-  await page.getByRole('button', { name: 'Speed 4x' }).click();
+  await page.getByRole('button', { name: '4× speed' }).click();
   await page.getByRole('button', { name: 'Resume' }).click();
   await expect(page.getByTestId('game-day')).toHaveText(/Day [1-9]/, { timeout: 5000 });
   while (await resolveDialog(page)) await page.waitForTimeout(100);

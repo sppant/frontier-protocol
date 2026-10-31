@@ -129,6 +129,51 @@ describe('save envelope and migrations', () => {
   });
 });
 
+describe('real migration: v1 → v2 (standings history)', () => {
+  /** A save exactly as v1 of the game wrote it: no `history`, game.version 1. */
+  const v1Save = () => {
+    const { history: _history, ...rest } = clone(midGame());
+    void _history;
+    return {
+      format: SAVE_FORMAT,
+      version: 1,
+      savedAt: new Date().toISOString(),
+      game: { ...rest, version: 1 },
+    };
+  };
+
+  it('upgrades a v1 save and keeps everything else intact', () => {
+    const old = v1Save();
+    const loaded = decodeSave(old);
+    expect(loaded.game.version).toBe(2);
+    expect(loaded.game.history).toEqual([]);
+    const { history: _h, version: _v, ...upgraded } = loaded.game;
+    const { version: _ov, ...original } = old.game as Record<string, unknown>;
+    void _h;
+    void _v;
+    void _ov;
+    expect(upgraded).toEqual(original);
+  });
+
+  it('an upgraded save keeps playing and starts recording history', () => {
+    const { game } = decodeSave(v1Save());
+    let s = game;
+    for (let i = 0; i < 25; i++) {
+      s = advanceGame(s, 1);
+      if (s.pendingEvent) s = { ...s, pendingEvent: null };
+    }
+    expect(s.history.length).toBeGreaterThan(0);
+    expect(() => validateGameState(clone(s))).not.toThrow();
+  });
+
+  it('still rejects a v1 save that is damaged, without throwing a non-SaveError', () => {
+    const bad = { ...v1Save(), game: 'garbage' };
+    expect(() => decodeSave(bad)).toThrow(SaveError);
+    const worse = { ...v1Save(), game: { nope: 1 } };
+    expect(() => decodeSave(worse)).toThrow(SaveError);
+  });
+});
+
 describe('storage', () => {
   it.each([
     ['MemoryStore', () => new MemoryStore()],

@@ -5,7 +5,7 @@ import type { FactionId } from '@/domain/types';
 import { maybeTriggerEvent } from './events';
 import { advanceFleets } from './fleets';
 import { modifiersFor } from './modifiers';
-import { checkVictory } from './victory';
+import { checkVictory, recordHistory } from './victory';
 import { factionReport, growPopulation, planetOf } from './economy';
 import { withEvent } from './state';
 
@@ -71,7 +71,7 @@ export function tick(state: GameState): GameState {
       next = withEvent(next, 'economy', id, 'Credit deficit: upkeep exceeds available credits.');
     }
   }
-  next = maybeTriggerEvent(next);
+  next = recordHistory(maybeTriggerEvent(next));
   const victory = checkVictory(next);
   if (victory) {
     next = withEvent(

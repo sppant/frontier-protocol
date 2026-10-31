@@ -21,7 +21,7 @@ describe('AppShell', () => {
     expect(screen.getByTestId('sim-status')).toHaveTextContent('Paused');
     await user.click(screen.getByRole('button', { name: 'Resume' }));
     expect(screen.getByTestId('sim-status')).toHaveTextContent('Running');
-    await user.click(screen.getByRole('button', { name: 'Speed 4x' }));
+    await user.click(screen.getByRole('button', { name: '4× speed' }));
     expect(useClockStore.getState().speed).toBe(4);
   });
 });

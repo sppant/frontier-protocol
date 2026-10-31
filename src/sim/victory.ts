@@ -5,7 +5,7 @@ import type { FactionId } from '@/domain/types';
 import { factionColonies } from './economy';
 
 /** Systems needed to win by Dominion (out of 16). */
-export const DOMINION_SYSTEMS = 10;
+export const DOMINION_SYSTEMS = 8;
 /** Days a faction needs to complete Nexus Attunement once it has researched it. */
 export const ATTUNEMENT_DAYS = 100;
 /** Day on which the match is decided by score if nobody has won. */
@@ -74,4 +74,21 @@ export function checkVictory(state: GameState): Victory | null {
     return { winner: best, kind: 'score', tick: state.tick };
   }
   return null;
+}
+
+/** Days between standings snapshots, and how many are kept. */
+export const HISTORY_INTERVAL = 10;
+const MAX_HISTORY = 100;
+
+/** Append a score snapshot when the tick is a multiple of the interval. */
+export function recordHistory(state: GameState): GameState {
+  if (state.tick % HISTORY_INTERVAL !== 0) return state;
+  const scores = Object.fromEntries(FACTION_IDS.map((f) => [f, score(state, f)])) as Record<
+    FactionId,
+    number
+  >;
+  return {
+    ...state,
+    history: [...state.history, { tick: state.tick, scores }].slice(-MAX_HISTORY),
+  };
 }

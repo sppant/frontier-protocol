@@ -13,7 +13,9 @@ export function Panel({ title, actions, children, className, ...rest }: PanelPro
         <h2 className={`label ${styles.title}`}>{title}</h2>
         {actions}
       </header>
-      <div className={styles.body}>{children}</div>
+      <div className={styles.body} tabIndex={0}>
+        {children}
+      </div>
     </section>
   );
 }

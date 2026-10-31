@@ -63,7 +63,7 @@ describe('technology', () => {
       ok: false,
       reason: 'Needs 40 research.',
     });
-    const rich = withResearch(g, 'terran', 9000);
+    const rich = withResearch(g, 'terran', 20000);
     expect(checkResearch(rich, 'terran', 'fusionGrid')).toEqual({
       ok: false,
       reason: 'Requires Deep Core Extraction.',
@@ -200,6 +200,20 @@ describe('events', () => {
   });
 });
 
+describe('standings history', () => {
+  it('records a score snapshot every 10 days, capped', () => {
+    let s = { ...game(), storyStage: 99 };
+    for (let i = 0; i < 35; i++) s = tick(s);
+    expect(s.history.map((h) => h.tick)).toEqual([10, 20, 30]);
+    // Day 10 snapshot: one owned system (10) plus a little population; later snapshots only grow.
+    expect(s.history[0]!.scores.terran).toBeGreaterThanOrEqual(10);
+    expect(s.history[2]!.scores.terran).toBeGreaterThanOrEqual(s.history[0]!.scores.terran);
+    for (let i = 0; i < 1500; i++) s = { ...tick({ ...s, victory: null }), pendingEvent: null };
+    expect(s.history.length).toBeLessThanOrEqual(100);
+    expect(s.history.at(-1)!.tick).toBeGreaterThan(s.history[0]!.tick);
+  });
+});
+
 describe('victory', () => {
   it('no one wins at the start; progress is reported', () => {
     const g = game();
@@ -211,7 +225,7 @@ describe('victory', () => {
   });
 
   it('Ascendancy: the capstone starts a public 100-day attunement, then wins', () => {
-    let s = { ...withResearch(game(), 'helion', 9000), storyStage: 6 };
+    let s = { ...withResearch(game(), 'helion', 20000), storyStage: 6 };
     for (const id of [
       'deepCore',
       'fusionGrid',

@@ -93,7 +93,7 @@ export const TECHS: TechDef[] = [
     name: 'Nexus Attunement',
     description:
       'Begin attuning to the Nexus. Ascendancy victory arrives 100 days later, visible to all factions.',
-    cost: 3500,
+    cost: 10000,
     requires: ['nexusCartography', 'quantumLabs', 'fusionGrid'],
     requiresStory: 6,
     capstone: true,

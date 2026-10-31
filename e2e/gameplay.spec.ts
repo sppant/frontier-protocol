@@ -24,7 +24,7 @@ test('simulation advances and building changes the economy', async ({ page }) =>
   await expect(minerals).toHaveText(String(before - 30));
 
   await expect(page.getByTestId('game-day')).toHaveText('Day 0');
-  await page.getByRole('button', { name: 'Speed 4x' }).click();
+  await page.getByRole('button', { name: '4× speed' }).click();
   await page.getByRole('button', { name: 'Resume' }).click();
 
   // Day 1 brings the First Contact event: time halts until the player decides.
@@ -35,7 +35,7 @@ test('simulation advances and building changes the economy', async ({ page }) =>
   await dialog.getByRole('button', { name: /Conserve resources/ }).click();
   await expect(dialog).toBeHidden();
 
-  await page.getByRole('button', { name: 'Speed 1x' }).click();
+  await page.getByRole('button', { name: '1× speed' }).click();
   await page.getByRole('button', { name: 'Resume' }).click();
   await expect(page.getByTestId('game-day')).not.toHaveText('Day 1', { timeout: 3000 });
   await page.getByRole('button', { name: 'Pause' }).click();
@@ -48,7 +48,7 @@ test('simulation advances and building changes the economy', async ({ page }) =>
 
 test('expedition reveals a new system and shows in the feed', async ({ page }) => {
   await startMatch(page);
-  await page.getByRole('button', { name: 'Speed 4x' }).click();
+  await page.getByRole('button', { name: '4× speed' }).click();
 
   // Pick a detected system on the 3D-independent simple map.
   await page.getByRole('button', { name: 'Simple map' }).click();
@@ -97,7 +97,7 @@ test('research tab: techs are gated by research points and apply on purchase', a
 
 test('rival bots act on their own and explain their decisions', async ({ page }) => {
   await startMatch(page);
-  await page.getByRole('button', { name: 'Speed 4x' }).click();
+  await page.getByRole('button', { name: '4× speed' }).click();
   await page.getByRole('tab', { name: 'Rival activity' }).click();
   const list = page.getByRole('list', { name: 'Rival activity' });
   await runUntil(page, () => list.isVisible());

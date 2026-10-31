@@ -96,7 +96,14 @@ export interface GameEvent {
   message: string;
 }
 
-export const SAVE_VERSION = 1;
+/** Bump when the shape of GameState changes, and add a migration in persistence/save.ts. */
+export const SAVE_VERSION = 2;
+
+/** Score snapshot used for the standings chart. */
+export interface HistoryPoint {
+  tick: number;
+  scores: Record<FactionId, number>;
+}
 
 /** The complete, serializable game state. All sim functions are pure over this. */
 export interface GameState {
@@ -124,4 +131,6 @@ export interface GameState {
   victory: Victory | null;
   /** Bot-controlled factions. Empty in bare sim states. */
   bots: BotMap;
+  /** Score snapshots every HISTORY_INTERVAL ticks (capped). */
+  history: HistoryPoint[];
 }
