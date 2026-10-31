@@ -21,9 +21,18 @@ React 19 · TypeScript (pinned `~6.0`: typescript-eslint doesn't support TS 7 ye
 - `e2e/` — Playwright specs. Unit tests live beside code as `*.test.ts(x)`.
 - Import alias `@/` → `src/`.
 
+## Simulation rules (current)
+
+- 1 tick = 1 game day; 1× speed = 1 tick/second (`TICK_MS`), 2×/4× scale it; paused = no ticks. Catch-up capped at 30 ticks/step.
+- Tick order: income & upkeep (from start-of-tick state) → construction → population growth → `tick++`. Credits clamp at 0 and set `deficit` (one event on entry).
+- Resources: credits (tax 0.5/pop, trade hub), minerals (mine: 2 + planet richness), research (lab: 1 + 0.25/pop). Colony upkeep 1¢ + 0.5¢/building. Faction `modifiers` (`domain/factions.ts`) scale output, colony cost, growth and upkeep.
+- Colonize: planet habitability ≥ 20, system explored, not controlled by another faction, in/adjacent to own territory, cost 120¢ + 60⛏ × faction `colonyCost`. Colonization is instant for now; Phase 4 will route it through expeditions/fleets.
+- Build queue max 3 per colony; each building once per colony; cost paid up-front.
+- No RNG consumed by tick yet; when events need it, add `rngState` to `GameState` (serializable) rather than a global RNG.
+
 ## Map ↔ state boundary
 
-Renderers read `galaxyStore` (`galaxy` static layout, `systemStates` dynamic) and only call `select`/`hover`. `GalaxyScene` is lazy-loaded (keeps three.js out of the main chunk and out of jsdom tests). Unknown systems are anonymous in UI (`displayName`). Shared visual constants live in `render/visuals.ts`; faction colors in `domain/factions.ts` (mirror `--faction-*` tokens).
+Renderers read `useGameStore((s) => s.game.galaxy / .systemStates)` and only call `useSelectionStore` `select`/`hover`. `GalaxyScene` is lazy-loaded (keeps three.js out of the main chunk and out of jsdom tests). Unknown systems are anonymous in UI (`displayName`). Shared visual constants live in `render/visuals.ts`; faction colors in `domain/factions.ts` (mirror `--faction-*` tokens).
 
 ## Conventions
 
@@ -46,8 +55,9 @@ Remote `origin` = https://github.com/sppant/frontier-protocol.git, branch `main`
 
 - [x] Phase 1 foundation: tooling, tokens, primitives, app shell with working pause/speed controls (placeholder map/panels are clearly labeled).
 - [x] Phase 2 galaxy visualization: seeded RNG + deterministic `generateGalaxy` (16 systems, hyperlanes, 4 capitals), `galaxyStore` (galaxy, per-system `SystemState`, selection/hover), R3F scene (instanced stars, lanes, territory rings, selection ring, starfield, nebulae, OrbitControls), 2D SVG `SimpleMap` fallback (no WebGL / player toggle), `SystemInspector`. Ownership/exploration is initial state only; sim will mutate it.
-- [ ] Phase 3 simulation · Phase 4 gameplay · Phase 5 bots · Phase 6 full UI · Phase 7 persistence/polish · Phase 8 verification.
+- [x] Phase 3 simulation core: `GameState` (serializable, `domain/game.ts`), `createGame(seed, faction)`, pure `tick`/`advance`, economy (`colonyReport`/`factionReport`, logistic population growth), commands (`checkColonize`/`colonize`, `checkBuild`/`startConstruction`), wall-clock `advanceClock` driven by `store/gameLoop.ts` (setInterval 100ms, not rAF). `gameStore` holds the state; `selectionStore` holds map selection. Top bar shows resources + net/day + day counter; inspector offers Colonize/Build with reasons on disabled buttons.
+- [ ] Phase 4 gameplay · Phase 5 bots · Phase 6 full UI · Phase 7 persistence/polish · Phase 8 verification.
 
 ## Known limitations / next
 
-Simulation, gameplay actions and bots not yet built; WebGL canvas itself is verified only via Playwright (jsdom has no WebGL). Vite 8 uses Rolldown, so `manualChunks` object form is unsupported; revisit chunk splitting if bundle size matters.
+Exploration/expeditions/fleets, tech, events, victory and bots not yet built; no persistence yet; WebGL canvas itself is verified only via Playwright (jsdom has no WebGL). Vite 8 uses Rolldown, so `manualChunks` object form is unsupported; revisit chunk splitting if bundle size matters.

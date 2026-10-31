@@ -4,7 +4,8 @@ import { Html, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { FACTIONS } from '@/domain/factions';
 import { createRng } from '@/sim/rng';
-import { useGalaxyStore } from '@/store/galaxyStore';
+import { useGameStore } from '@/store/gameStore';
+import { useSelectionStore } from '@/store/selectionStore';
 import { STAR_COLORS, STAR_SIZES, UNKNOWN_COLOR, displayName, statusScale } from './visuals';
 import { prefersReducedMotion } from './webgl';
 import styles from './GalaxyScene.module.css';
@@ -27,10 +28,10 @@ function makeGlowTexture(): THREE.CanvasTexture {
 }
 
 function Stars() {
-  const galaxy = useGalaxyStore((s) => s.galaxy);
-  const states = useGalaxyStore((s) => s.systemStates);
-  const select = useGalaxyStore((s) => s.select);
-  const hover = useGalaxyStore((s) => s.hover);
+  const galaxy = useGameStore((s) => s.game.galaxy);
+  const states = useGameStore((s) => s.game.systemStates);
+  const select = useSelectionStore((s) => s.select);
+  const hover = useSelectionStore((s) => s.hover);
   const mesh = useRef<THREE.InstancedMesh>(null);
 
   useLayoutEffect(() => {
@@ -82,8 +83,8 @@ function Stars() {
 }
 
 function Glows() {
-  const galaxy = useGalaxyStore((s) => s.galaxy);
-  const states = useGalaxyStore((s) => s.systemStates);
+  const galaxy = useGameStore((s) => s.game.galaxy);
+  const states = useGameStore((s) => s.game.systemStates);
   const texture = useMemo(() => makeGlowTexture(), []);
   useEffect(() => () => texture.dispose(), [texture]);
 
@@ -120,8 +121,8 @@ function Glows() {
 }
 
 function Lanes() {
-  const galaxy = useGalaxyStore((s) => s.galaxy);
-  const states = useGalaxyStore((s) => s.systemStates);
+  const galaxy = useGameStore((s) => s.game.galaxy);
+  const states = useGameStore((s) => s.game.systemStates);
 
   const { positions, colors } = useMemo(() => {
     const byId = new Map(galaxy.systems.map((s) => [s.id, s]));
@@ -155,8 +156,8 @@ function Lanes() {
 const ringGeometry = new THREE.RingGeometry(2.1, 2.4, 48);
 
 function Territories() {
-  const galaxy = useGalaxyStore((s) => s.galaxy);
-  const states = useGalaxyStore((s) => s.systemStates);
+  const galaxy = useGameStore((s) => s.game.galaxy);
+  const states = useGameStore((s) => s.game.systemStates);
   const materials = useMemo(
     () =>
       Object.fromEntries(
@@ -205,8 +206,8 @@ const selectionMaterial = new THREE.MeshBasicMaterial({
 });
 
 function SelectionRing({ animate }: { animate: boolean }) {
-  const selectedId = useGalaxyStore((s) => s.selectedId);
-  const galaxy = useGalaxyStore((s) => s.galaxy);
+  const selectedId = useSelectionStore((s) => s.selectedId);
+  const galaxy = useGameStore((s) => s.game.galaxy);
   const ref = useRef<THREE.Mesh>(null);
   const sys = galaxy.systems.find((s) => s.id === selectedId);
 
@@ -229,9 +230,9 @@ function SelectionRing({ animate }: { animate: boolean }) {
 }
 
 function Labels() {
-  const galaxy = useGalaxyStore((s) => s.galaxy);
-  const states = useGalaxyStore((s) => s.systemStates);
-  const hoveredId = useGalaxyStore((s) => s.hoveredId);
+  const galaxy = useGameStore((s) => s.game.galaxy);
+  const states = useGameStore((s) => s.game.systemStates);
+  const hoveredId = useSelectionStore((s) => s.hoveredId);
   return (
     <>
       {galaxy.systems.map((sys) => {
@@ -318,8 +319,8 @@ function Backdrop({ seed }: { seed: number }) {
 }
 
 export default function GalaxyScene() {
-  const seed = useGalaxyStore((s) => s.galaxy.seed);
-  const select = useGalaxyStore((s) => s.select);
+  const seed = useGameStore((s) => s.game.galaxy.seed);
+  const select = useSelectionStore((s) => s.select);
   const reduced = useMemo(() => prefersReducedMotion(), []);
 
   return (

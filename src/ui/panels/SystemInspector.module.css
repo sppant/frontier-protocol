@@ -31,16 +31,43 @@
   flex-direction: column;
   gap: var(--sp-2);
 }
-.planets li {
+.planet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--line);
+}
+.planetHead {
   display: grid;
   grid-template-columns: 10px 1fr auto auto;
   align-items: center;
   gap: var(--sp-2);
 }
-.planets i {
+.planetHead i {
   width: 10px;
   height: 10px;
   border-radius: 50%;
+}
+.colony {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding-left: 18px;
+}
+.mine {
+  color: var(--accent);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0 0 18px;
+}
+.error {
+  color: var(--danger);
+  padding-left: 18px;
 }
 .dim {
   color: var(--text-2);

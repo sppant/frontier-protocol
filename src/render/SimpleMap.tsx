@@ -1,15 +1,16 @@
 import { useMemo } from 'react';
 import { FACTIONS } from '@/domain/factions';
-import { useGalaxyStore } from '@/store/galaxyStore';
+import { useGameStore } from '@/store/gameStore';
+import { useSelectionStore } from '@/store/selectionStore';
 import { STAR_COLORS, STAR_SIZES, UNKNOWN_COLOR, displayName, statusScale } from './visuals';
 import styles from './SimpleMap.module.css';
 
 /** Lightweight 2D top-down map. Used when WebGL is unavailable or the player chooses simple mode. */
 export function SimpleMap() {
-  const galaxy = useGalaxyStore((s) => s.galaxy);
-  const states = useGalaxyStore((s) => s.systemStates);
-  const selectedId = useGalaxyStore((s) => s.selectedId);
-  const select = useGalaxyStore((s) => s.select);
+  const galaxy = useGameStore((s) => s.game.galaxy);
+  const states = useGameStore((s) => s.game.systemStates);
+  const selectedId = useSelectionStore((s) => s.selectedId);
+  const select = useSelectionStore((s) => s.select);
 
   const byId = useMemo(() => new Map(galaxy.systems.map((s) => [s.id, s])), [galaxy]);
   const extent = useMemo(

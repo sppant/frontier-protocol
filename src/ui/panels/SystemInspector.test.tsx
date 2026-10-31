@@ -2,7 +2,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { SimpleMap } from '@/render/SimpleMap';
-import { useGalaxyStore } from '@/store/galaxyStore';
+import { useGameStore } from '@/store/gameStore';
+import { useSelectionStore } from '@/store/selectionStore';
 import { SystemInspector } from './SystemInspector';
 
 function Harness() {
@@ -15,7 +16,7 @@ function Harness() {
 }
 
 describe('map ↔ inspector boundary', () => {
-  beforeEach(() => useGalaxyStore.setState({ selectedId: null, hoveredId: null }));
+  beforeEach(() => useSelectionStore.setState({ selectedId: null, hoveredId: null }));
 
   it('prompts when nothing is selected', () => {
     render(<Harness />);
@@ -23,22 +24,22 @@ describe('map ↔ inspector boundary', () => {
   });
 
   it('shows full details for the explored home system', async () => {
-    const { galaxy, playerFaction } = useGalaxyStore.getState();
+    const { galaxy, playerFaction } = useGameStore.getState().game;
     const home = galaxy.systems.find((s) => s.homeOf === playerFaction)!;
     render(<Harness />);
     await userEvent.click(screen.getByRole('button', { name: home.name }));
-    expect(useGalaxyStore.getState().selectedId).toBe(home.id);
+    expect(useSelectionStore.getState().selectedId).toBe(home.id);
     expect(screen.getByRole('heading', { name: home.name })).toBeInTheDocument();
     expect(screen.getByText(/Planets \(/)).toBeInTheDocument();
     expect(screen.getByText('Terran Directorate')).toBeInTheDocument();
   });
 
   it('keeps unknown systems anonymous', async () => {
-    const { galaxy, systemStates } = useGalaxyStore.getState();
+    const { galaxy, systemStates } = useGameStore.getState().game;
     const unknown = galaxy.systems.find((s) => systemStates[s.id]?.exploration === 'unknown')!;
     render(<Harness />);
     await userEvent.click(screen.getAllByRole('button', { name: 'Unknown system' })[0]!);
-    expect(useGalaxyStore.getState().selectedId).not.toBeNull();
+    expect(useSelectionStore.getState().selectedId).not.toBeNull();
     expect(screen.queryByText(unknown.name)).not.toBeInTheDocument();
     expect(screen.getByText(/beyond sensor range|Send an expedition/)).toBeInTheDocument();
   });

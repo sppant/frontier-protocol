@@ -23,3 +23,29 @@
   align-items: center;
   gap: var(--sp-2);
 }
+.resources {
+  list-style: none;
+  display: flex;
+  gap: var(--sp-5);
+  margin: 0;
+  padding: 0;
+}
+.resource {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  color: var(--res);
+  border-left: 2px solid var(--res);
+  padding-left: var(--sp-2);
+}
+.resource .label {
+  color: var(--text-2);
+}
+.rate {
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+.neg {
+  color: var(--danger);
+  font-size: var(--text-xs);
+}

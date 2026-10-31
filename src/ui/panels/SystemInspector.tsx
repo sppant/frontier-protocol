@@ -1,13 +1,15 @@
 import { FACTIONS } from '@/domain/factions';
-import { EXPLORATION_LABEL, PLANET_COLORS, displayName } from '@/render/visuals';
-import { useGalaxyStore } from '@/store/galaxyStore';
+import { EXPLORATION_LABEL, displayName } from '@/render/visuals';
+import { useGameStore } from '@/store/gameStore';
+import { useSelectionStore } from '@/store/selectionStore';
 import { Panel } from '@/ui/primitives';
+import { PlanetRow } from './PlanetRow';
 import styles from './SystemInspector.module.css';
 
 export function SystemInspector() {
-  const galaxy = useGalaxyStore((s) => s.galaxy);
-  const states = useGalaxyStore((s) => s.systemStates);
-  const selectedId = useGalaxyStore((s) => s.selectedId);
+  const galaxy = useGameStore((s) => s.game.galaxy);
+  const states = useGameStore((s) => s.game.systemStates);
+  const selectedId = useSelectionStore((s) => s.selectedId);
 
   const system = galaxy.systems.find((s) => s.id === selectedId);
   const state = system ? states[system.id] : undefined;
@@ -56,14 +58,7 @@ export function SystemInspector() {
           <h4 className="label">Planets ({planets.length})</h4>
           <ul className={styles.planets}>
             {planets.map((p) => (
-              <li key={p.id}>
-                <i style={{ background: PLANET_COLORS[p.type] }} />
-                <span>{p.name}</span>
-                <span className={styles.dim}>{p.type}</span>
-                <span className={`mono ${styles.dim}`} title="Habitability / minerals">
-                  H{p.habitability} M{p.minerals}
-                </span>
-              </li>
+              <PlanetRow key={p.id} planet={p} />
             ))}
           </ul>
         </>
