@@ -1,0 +1,25 @@
+.bar {
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-4);
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--line);
+}
+.brand {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.title {
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+}
+.clock {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}

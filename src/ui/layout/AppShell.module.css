@@ -1,0 +1,52 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: 1fr 200px;
+  grid-template-areas:
+    'map side'
+    'feed side';
+  gap: 1px;
+  background: var(--line);
+}
+.map {
+  grid-area: map;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at center, var(--bg-2), var(--bg-0));
+}
+.side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.side > * {
+  flex: 1;
+}
+.feed {
+  grid-area: feed;
+  display: flex;
+  min-height: 0;
+}
+.feed > * {
+  flex: 1;
+}
+
+@media (max-width: 800px) {
+  body {
+    overflow: auto;
+  }
+  .main {
+    grid-template-columns: 1fr;
+    grid-template-rows: 55vh auto auto;
+    grid-template-areas: 'map' 'side' 'feed';
+    overflow: auto;
+  }
+}

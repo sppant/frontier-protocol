@@ -1,0 +1,65 @@
+:root {
+  /* Surfaces */
+  --bg-0: #07090d;
+  --bg-1: #0c1016;
+  --bg-2: #121820;
+  --bg-3: #1a222d;
+  --line: #243040;
+  --line-strong: #34465c;
+
+  /* Text */
+  --text-0: #e8edf3;
+  --text-1: #aab5c3;
+  --text-2: #6f7d8f;
+
+  /* Single UI accent: amber console glow */
+  --accent: #ffb347;
+  --accent-dim: #8a5f23;
+  --accent-bg: rgb(255 179 71 / 0.1);
+
+  /* Status */
+  --ok: #4fd08a;
+  --warn: #ffb347;
+  --danger: #ff5a4f;
+
+  /* Resources */
+  --res-credits: #f4d35e;
+  --res-minerals: #e0875a;
+  --res-research: #5ec8f2;
+
+  /* Factions */
+  --faction-terran: #4aa3ff;
+  --faction-helion: #4fe0a0;
+  --faction-veydran: #ff5a4f;
+  --faction-oracle: #c28bff;
+
+  /* Type */
+  --font-ui: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+  --text-xs: 0.6875rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+
+  /* Spacing scale */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  --radius: 3px;
+  --topbar-h: 48px;
+  --focus: 0 0 0 2px var(--bg-0), 0 0 0 4px var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
