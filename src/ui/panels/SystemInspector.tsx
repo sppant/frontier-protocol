@@ -1,8 +1,10 @@
 import { FACTIONS } from '@/domain/factions';
 import { EXPLORATION_LABEL, displayName } from '@/render/visuals';
 import { useGameStore } from '@/store/gameStore';
+import { useExploration } from '@/store/selectors';
 import { useSelectionStore } from '@/store/selectionStore';
 import { Panel } from '@/ui/primitives';
+import { ExpeditionAction } from './ExpeditionAction';
 import { PlanetRow } from './PlanetRow';
 import styles from './SystemInspector.module.css';
 
@@ -13,6 +15,7 @@ export function SystemInspector() {
 
   const system = galaxy.systems.find((s) => s.id === selectedId);
   const state = system ? states[system.id] : undefined;
+  const status = useExploration()(system?.id ?? '');
 
   if (!system || !state) {
     return (
@@ -22,7 +25,7 @@ export function SystemInspector() {
     );
   }
 
-  const explored = state.exploration === 'explored';
+  const explored = status === 'explored';
   const owner = state.ownerId ? FACTIONS[state.ownerId] : null;
   const planets = galaxy.planets.filter((p) => p.systemId === system.id);
   const neighbours = galaxy.lanes
@@ -31,13 +34,13 @@ export function SystemInspector() {
 
   return (
     <Panel title="Inspector">
-      <h3 className={styles.name}>{displayName(system.name, state.exploration)}</h3>
+      <h3 className={styles.name}>{displayName(system.name, status)}</h3>
       <dl className={styles.facts}>
         <dt>Status</dt>
-        <dd>{EXPLORATION_LABEL[state.exploration]}</dd>
+        <dd>{EXPLORATION_LABEL[status]}</dd>
         <dt>Controller</dt>
         <dd>
-          {state.exploration === 'unknown' ? (
+          {status === 'unknown' ? (
             '—'
           ) : owner ? (
             <span style={{ color: owner.color }}>{owner.name}</span>
@@ -63,11 +66,14 @@ export function SystemInspector() {
           </ul>
         </>
       ) : (
-        <p className={styles.hint}>
-          {state.exploration === 'detected'
-            ? 'Long-range sensors detect a star here. Send an expedition to survey it.'
-            : 'No data. This system is beyond sensor range.'}
-        </p>
+        <>
+          <p className={styles.hint}>
+            {status === 'detected'
+              ? 'Long-range sensors detect a star here. Send an expedition to survey it.'
+              : 'No data. This system is beyond sensor range.'}
+          </p>
+          {status === 'detected' && <ExpeditionAction systemId={system.id} />}
+        </>
       )}
     </Panel>
   );

@@ -1,6 +1,6 @@
 import { GalaxyMap } from '@/render/GalaxyMap';
+import { EventFeed } from '@/ui/panels/EventFeed';
 import { SystemInspector } from '@/ui/panels/SystemInspector';
-import { Panel } from '@/ui/primitives';
 import { TopBar } from './TopBar';
 import styles from './AppShell.module.css';
 
@@ -16,9 +16,7 @@ export function AppShell() {
           <SystemInspector />
         </aside>
         <div className={styles.feed}>
-          <Panel title="Event feed">
-            <p>No events yet.</p>
-          </Panel>
+          <EventFeed />
         </div>
       </main>
     </div>

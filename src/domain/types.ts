@@ -41,6 +41,15 @@ export interface Galaxy {
 
 /** Per-system dynamic state. */
 export interface SystemState {
-  exploration: ExplorationStatus;
+  /** What each faction knows about this system (fog of war is per faction). */
+  exploration: Record<FactionId, ExplorationStatus>;
   ownerId: FactionId | null;
+}
+
+/** Exploration status of a system from one faction's point of view. */
+export function explorationOf(
+  state: SystemState | undefined,
+  faction: FactionId,
+): ExplorationStatus {
+  return state?.exploration[faction] ?? 'unknown';
 }

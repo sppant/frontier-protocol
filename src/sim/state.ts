@@ -46,9 +46,11 @@ export function createGame(seed: number, playerFaction: FactionId): GameState {
     tick: 0,
     playerFaction,
     galaxy,
-    systemStates: createInitialSystemStates(galaxy, playerFaction),
+    systemStates: createInitialSystemStates(galaxy),
     factions,
     colonies,
+    fleets: {},
+    nextFleetId: 1,
     events: [],
     nextEventId: 1,
   };

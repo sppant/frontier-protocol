@@ -98,7 +98,7 @@ export function PlanetRow({ planet }: { planet: Planet }) {
               >
                 Colonize{check.ok ? ` · ${costText(check.cost)}` : ''}
               </Button>
-              {!check.ok && <span className={styles.dim}>{check.reason}</span>}
+              {!check.ok && <span className={styles.reason}>{check.reason}</span>}
             </div>
           );
         })()

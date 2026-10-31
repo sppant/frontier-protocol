@@ -1,10 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber';
-import { Html, OrbitControls } from '@react-three/drei';
+import { Html, Line, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { FACTIONS } from '@/domain/factions';
 import { createRng } from '@/sim/rng';
 import { useGameStore } from '@/store/gameStore';
+import { fleetPosition, fleetRoute } from '@/sim/fleets';
+import type { Fleet } from '@/domain/game';
+import { useExploration } from '@/store/selectors';
 import { useSelectionStore } from '@/store/selectionStore';
 import { STAR_COLORS, STAR_SIZES, UNKNOWN_COLOR, displayName, statusScale } from './visuals';
 import { prefersReducedMotion } from './webgl';
@@ -28,8 +31,8 @@ function makeGlowTexture(): THREE.CanvasTexture {
 }
 
 function Stars() {
+  const statusOf = useExploration();
   const galaxy = useGameStore((s) => s.game.galaxy);
-  const states = useGameStore((s) => s.game.systemStates);
   const select = useSelectionStore((s) => s.select);
   const hover = useSelectionStore((s) => s.hover);
   const mesh = useRef<THREE.InstancedMesh>(null);
@@ -40,8 +43,7 @@ function Stars() {
     const dummy = new THREE.Object3D();
     const color = new THREE.Color();
     galaxy.systems.forEach((sys, i) => {
-      const st = states[sys.id];
-      const status = st?.exploration ?? 'unknown';
+      const status = statusOf(sys.id);
       dummy.position.set(...sys.position);
       dummy.scale.setScalar(STAR_SIZES[sys.starClass] * statusScale(status));
       dummy.updateMatrix();
@@ -52,7 +54,7 @@ function Stars() {
     m.instanceMatrix.needsUpdate = true;
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
     m.computeBoundingSphere();
-  }, [galaxy, states]);
+  }, [galaxy, statusOf]);
 
   const idAt = (e: ThreeEvent<PointerEvent | MouseEvent>) =>
     e.instanceId === undefined ? null : (galaxy.systems[e.instanceId]?.id ?? null);
@@ -83,8 +85,8 @@ function Stars() {
 }
 
 function Glows() {
+  const statusOf = useExploration();
   const galaxy = useGameStore((s) => s.game.galaxy);
-  const states = useGameStore((s) => s.game.systemStates);
   const texture = useMemo(() => makeGlowTexture(), []);
   useEffect(() => () => texture.dispose(), [texture]);
 
@@ -94,16 +96,16 @@ function Glows() {
     const c = new THREE.Color();
     galaxy.systems.forEach((sys, i) => {
       positions.set(sys.position, i * 3);
-      const known = states[sys.id]?.exploration !== 'unknown';
+      const known = statusOf(sys.id) !== 'unknown';
       c.set(known ? STAR_COLORS[sys.starClass] : UNKNOWN_COLOR).multiplyScalar(known ? 1 : 0.3);
       colors.set([c.r, c.g, c.b], i * 3);
     });
     return { positions, colors };
-  }, [galaxy, states]);
+  }, [galaxy, statusOf]);
 
   return (
     <points>
-      <bufferGeometry key={positions.length + String(Object.keys(states).length)}>
+      <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
         <bufferAttribute attach="attributes-color" args={[colors, 3]} />
       </bufferGeometry>
@@ -121,8 +123,8 @@ function Glows() {
 }
 
 function Lanes() {
+  const statusOf = useExploration();
   const galaxy = useGameStore((s) => s.game.galaxy);
-  const states = useGameStore((s) => s.game.systemStates);
 
   const { positions, colors } = useMemo(() => {
     const byId = new Map(galaxy.systems.map((s) => [s.id, s]));
@@ -134,13 +136,13 @@ function Lanes() {
       const sa = byId.get(a);
       const sb = byId.get(b);
       if (!sa || !sb) continue;
-      const known = states[a]?.exploration !== 'unknown' || states[b]?.exploration !== 'unknown';
+      const known = statusOf(a) !== 'unknown' || statusOf(b) !== 'unknown';
       const c = known ? bright : dim;
       pos.push(...sa.position, ...sb.position);
       col.push(c.r, c.g, c.b, c.r, c.g, c.b);
     }
     return { positions: new Float32Array(pos), colors: new Float32Array(col) };
-  }, [galaxy, states]);
+  }, [galaxy, statusOf]);
 
   return (
     <lineSegments key={`${positions.length}-${colors.join('').length}`}>
@@ -156,6 +158,7 @@ function Lanes() {
 const ringGeometry = new THREE.RingGeometry(2.1, 2.4, 48);
 
 function Territories() {
+  const statusOf = useExploration();
   const galaxy = useGameStore((s) => s.game.galaxy);
   const states = useGameStore((s) => s.game.systemStates);
   const materials = useMemo(
@@ -180,7 +183,7 @@ function Territories() {
     <>
       {galaxy.systems.map((sys) => {
         const st = states[sys.id];
-        if (!st?.ownerId || st.exploration === 'unknown') return null;
+        if (!st?.ownerId || statusOf(sys.id) === 'unknown') return null;
         const material = materials[st.ownerId];
         if (!material) return null;
         return (
@@ -193,6 +196,59 @@ function Territories() {
           />
         );
       })}
+    </>
+  );
+}
+
+const fleetGeometry = new THREE.OctahedronGeometry(0.55);
+const fleetMaterial = new THREE.MeshBasicMaterial({ color: '#ffb347' });
+
+function FleetMarker({ fleet, animate }: { fleet: Fleet; animate: boolean }) {
+  const galaxy = useGameStore((s) => s.game.galaxy);
+  const ref = useRef<THREE.Mesh>(null);
+  const target = useMemo(() => new THREE.Vector3(...fleetPosition(galaxy, fleet)), [galaxy, fleet]);
+  const route = useMemo(() => fleetRoute(galaxy, fleet), [galaxy, fleet]);
+
+  useLayoutEffect(() => {
+    ref.current?.position.copy(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- snap only on mount
+  }, []);
+  // Ease toward the per-tick position so movement looks continuous between ticks.
+  useFrame((_, dt) => {
+    const m = ref.current;
+    if (!m) return;
+    if (animate) m.position.lerp(target, Math.min(1, dt * 4));
+    else m.position.copy(target);
+    m.rotation.y += animate ? dt * 1.5 : 0;
+  });
+
+  return (
+    <>
+      <mesh ref={ref} geometry={fleetGeometry} material={fleetMaterial} />
+      <Line
+        points={route}
+        color="#ffb347"
+        dashed
+        dashSize={0.6}
+        gapSize={0.5}
+        lineWidth={1}
+        transparent
+        opacity={0.7}
+      />
+    </>
+  );
+}
+
+function Fleets({ animate }: { animate: boolean }) {
+  const fleets = useGameStore((s) => s.game.fleets);
+  const player = useGameStore((s) => s.game.playerFaction);
+  return (
+    <>
+      {Object.values(fleets)
+        .filter((f) => f.ownerId === player)
+        .map((f) => (
+          <FleetMarker key={f.id} fleet={f} animate={animate} />
+        ))}
     </>
   );
 }
@@ -230,13 +286,13 @@ function SelectionRing({ animate }: { animate: boolean }) {
 }
 
 function Labels() {
+  const statusOf = useExploration();
   const galaxy = useGameStore((s) => s.game.galaxy);
-  const states = useGameStore((s) => s.game.systemStates);
   const hoveredId = useSelectionStore((s) => s.hoveredId);
   return (
     <>
       {galaxy.systems.map((sys) => {
-        const status = states[sys.id]?.exploration ?? 'unknown';
+        const status = statusOf(sys.id);
         if (status === 'unknown' && hoveredId !== sys.id) return null;
         return (
           <Html
@@ -341,6 +397,7 @@ export default function GalaxyScene() {
       <Glows />
       <Stars />
       <SelectionRing animate={!reduced} />
+      <Fleets animate={!reduced} />
       <Labels />
       <OrbitControls
         makeDefault

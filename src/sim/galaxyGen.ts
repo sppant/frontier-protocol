@@ -210,23 +210,23 @@ export function generateGalaxy(seed: number, systemCount = DEFAULT_SYSTEM_COUNT)
   };
 }
 
-/** Starting ownership/exploration: capitals are owned; the player sees their home and its neighbours. */
-export function createInitialSystemStates(
-  galaxy: Galaxy,
-  playerFaction: FactionId,
-): Record<string, SystemState> {
+/** Starting ownership and fog of war: each faction knows its capital and the systems beside it. */
+export function createInitialSystemStates(galaxy: Galaxy): Record<string, SystemState> {
   const states: Record<string, SystemState> = {};
   for (const s of galaxy.systems) {
-    states[s.id] = { exploration: 'unknown', ownerId: s.homeOf };
+    const exploration = Object.fromEntries(
+      FACTION_IDS.map((f) => [f, 'unknown']),
+    ) as SystemState['exploration'];
+    states[s.id] = { exploration, ownerId: s.homeOf };
   }
-  const home = galaxy.systems.find((s) => s.homeOf === playerFaction);
-  if (home) {
-    (states[home.id] as SystemState).exploration = 'explored';
+  for (const home of galaxy.systems) {
+    if (!home.homeOf) continue;
+    const f = home.homeOf;
+    (states[home.id] as SystemState).exploration[f] = 'explored';
     for (const [a, b] of galaxy.lanes) {
       const other = a === home.id ? b : b === home.id ? a : null;
-      if (other && (states[other] as SystemState).exploration === 'unknown') {
-        (states[other] as SystemState).exploration = 'detected';
-      }
+      const st = other ? states[other] : undefined;
+      if (st && st.exploration[f] === 'unknown') st.exploration[f] = 'detected';
     }
   }
   return states;

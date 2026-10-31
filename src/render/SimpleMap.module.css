@@ -31,3 +31,16 @@
   text-anchor: middle;
   pointer-events: none;
 }
+
+.fleet path {
+  fill: var(--accent);
+  stroke: var(--bg-0);
+  stroke-width: 0.15;
+}
+.route {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 0.15;
+  stroke-dasharray: 0.6 0.5;
+  opacity: 0.8;
+}

@@ -73,16 +73,21 @@ describe('generateGalaxy', () => {
 });
 
 describe('createInitialSystemStates', () => {
-  it('reveals only the player home and its neighbours', () => {
+  it('reveals each faction only its own capital and the systems beside it', () => {
     const g = generateGalaxy(2479);
-    const states = createInitialSystemStates(g, 'terran');
-    const home = g.systems.find((s) => s.homeOf === 'terran');
-    expect(states[home?.id as string]).toEqual({ exploration: 'explored', ownerId: 'terran' });
-    const neighbours = g.lanes
-      .filter(([a, b]) => a === home?.id || b === home?.id)
-      .map(([a, b]) => (a === home?.id ? b : a));
-    for (const n of neighbours) expect(states[n]?.exploration).not.toBe('unknown');
-    const revealed = Object.values(states).filter((s) => s.exploration !== 'unknown').length;
-    expect(revealed).toBe(1 + new Set(neighbours).size);
+    const states = createInitialSystemStates(g);
+    for (const f of FACTION_IDS) {
+      const home = g.systems.find((s) => s.homeOf === f)!;
+      expect(states[home.id]).toMatchObject({ ownerId: f });
+      expect(states[home.id]!.exploration[f]).toBe('explored');
+      const neighbours = new Set(
+        g.lanes
+          .filter(([a, b]) => a === home.id || b === home.id)
+          .map(([a, b]) => (a === home.id ? b : a)),
+      );
+      for (const n of neighbours) expect(states[n]!.exploration[f]).not.toBe('unknown');
+      const revealed = Object.values(states).filter((s) => s.exploration[f] !== 'unknown').length;
+      expect(revealed).toBe(1 + neighbours.size);
+    }
   });
 });

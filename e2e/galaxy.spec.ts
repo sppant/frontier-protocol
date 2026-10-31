@@ -18,5 +18,5 @@ test('3D galaxy renders without errors and systems can be inspected via simple m
   await expect(page.getByRole('group', { name: 'Simple galaxy map' })).toBeVisible();
   await expect(page.getByText(/select a star system/i)).toBeVisible();
   await page.getByRole('button', { name: 'Unknown system' }).first().click();
-  await expect(page.getByText(/beyond sensor range|Send an expedition/)).toBeVisible();
+  await expect(page.getByText(/beyond sensor range/)).toBeVisible();
 });

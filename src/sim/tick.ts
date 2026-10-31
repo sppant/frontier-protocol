@@ -2,6 +2,7 @@ import { BUILDINGS } from '@/domain/buildings';
 import { FACTION_IDS, FACTIONS } from '@/domain/factions';
 import type { Colony, FactionState, GameState } from '@/domain/game';
 import type { FactionId } from '@/domain/types';
+import { advanceFleets } from './fleets';
 import { factionReport, growPopulation, planetOf } from './economy';
 import { withEvent } from './state';
 
@@ -22,7 +23,7 @@ function advanceFaction(state: GameState, id: FactionId): FactionState {
 
 /**
  * Advance the simulation by exactly one tick (one game day).
- * Order: income/upkeep from start-of-tick state → construction → population growth → tick++.
+ * Order: income/upkeep from start-of-tick state → construction → population growth → tick++ → fleet movement.
  */
 export function tick(state: GameState): GameState {
   const factions = { ...state.factions };
@@ -50,7 +51,7 @@ export function tick(state: GameState): GameState {
     colonies[colony.id] = next;
   }
 
-  let next: GameState = { ...state, factions, colonies, tick: state.tick + 1 };
+  let next: GameState = advanceFleets({ ...state, factions, colonies, tick: state.tick + 1 });
   for (const { colony, building } of completed) {
     const planet = planetOf(next, colony.planetId);
     next = withEvent(

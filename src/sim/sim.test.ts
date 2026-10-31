@@ -29,7 +29,15 @@ function findTarget(g: GameState, f: FactionId) {
     systemStates: Object.fromEntries(
       Object.entries(g.systemStates).map(([id, s]) => [
         id,
-        { ...s, exploration: 'explored' as const },
+        {
+          ...s,
+          exploration: {
+            terran: 'explored',
+            helion: 'explored',
+            veydran: 'explored',
+            oracle: 'explored',
+          } as const,
+        },
       ]),
     ),
   };
@@ -193,7 +201,7 @@ describe('colonization', () => {
   it('requires exploration, habitability, reach and resources', () => {
     const g = newGame();
     const unexplored = g.galaxy.planets.find(
-      (p) => g.systemStates[p.systemId]!.exploration === 'unknown' && p.habitability >= 20,
+      (p) => g.systemStates[p.systemId]!.exploration.terran === 'unknown' && p.habitability >= 20,
     )!;
     expect(checkColonize(g, 'terran', unexplored.id)).toEqual({
       ok: false,

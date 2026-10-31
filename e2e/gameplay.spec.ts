@@ -33,3 +33,31 @@ test('simulation advances and building changes the economy', async ({ page }) =>
   await page.waitForTimeout(1200);
   await expect(page.getByTestId('game-day')).toHaveText(frozen ?? '');
 });
+
+test('expedition reveals a new system and shows in the feed', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Speed 4x' }).click();
+
+  // Pick a detected system on the 3D-independent simple map.
+  await page.getByRole('button', { name: 'Simple map' }).click();
+  const buttons = page.getByRole('group', { name: 'Simple galaxy map' }).getByRole('button');
+  const send = page.getByRole('button', { name: /^Send expedition/ });
+  let found = false;
+  for (let i = 0; i < (await buttons.count()) && !found; i++) {
+    const label = await buttons.nth(i).getAttribute('aria-label');
+    if (label?.startsWith('Unknown system')) continue;
+    await buttons.nth(i).click();
+    found = (await send.count()) > 0;
+  }
+  expect(found).toBe(true);
+  await send.click();
+  await expect(page.getByRole('list', { name: 'Active expeditions' })).toBeVisible();
+
+  // Back to 3D to check the fleet renders without errors.
+  await page.getByRole('button', { name: 'Simple map' }).click();
+  await page.getByRole('button', { name: 'Resume' }).click();
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: process.env.SHOT ?? 'test-results/fleet.png' });
+  await expect(page.getByText(/surveyed/)).toBeVisible({ timeout: 25_000 });
+  await expect(page.getByRole('list', { name: 'Active expeditions' })).toBeHidden();
+});

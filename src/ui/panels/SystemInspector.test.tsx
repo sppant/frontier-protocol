@@ -36,7 +36,9 @@ describe('map ↔ inspector boundary', () => {
 
   it('keeps unknown systems anonymous', async () => {
     const { galaxy, systemStates } = useGameStore.getState().game;
-    const unknown = galaxy.systems.find((s) => systemStates[s.id]?.exploration === 'unknown')!;
+    const unknown = galaxy.systems.find(
+      (s) => systemStates[s.id]?.exploration.terran === 'unknown',
+    )!;
     render(<Harness />);
     await userEvent.click(screen.getAllByRole('button', { name: 'Unknown system' })[0]!);
     expect(useSelectionStore.getState().selectedId).not.toBeNull();

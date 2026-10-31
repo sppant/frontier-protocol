@@ -1,7 +1,7 @@
 import { BUILDINGS } from '@/domain/buildings';
 import { FACTIONS } from '@/domain/factions';
 import type { BuildingId, GameState, Resources } from '@/domain/game';
-import type { FactionId } from '@/domain/types';
+import { explorationOf, type FactionId } from '@/domain/types';
 import { MIN_COLONY_HABITABILITY, planetOf } from './economy';
 import { colonyIdFor, withEvent } from './state';
 
@@ -58,7 +58,7 @@ export function checkColonize(
     return { ok: false, reason: `Habitability too low (needs ${MIN_COLONY_HABITABILITY}).` };
   }
   const sys = state.systemStates[planet.systemId];
-  if (!sys || sys.exploration !== 'explored')
+  if (!sys || explorationOf(sys, factionId) !== 'explored')
     return { ok: false, reason: 'System must be explored first.' };
   if (sys.ownerId && sys.ownerId !== factionId)
     return { ok: false, reason: 'System is controlled by another faction.' };
@@ -80,6 +80,8 @@ export function colonize(state: GameState, factionId: FactionId, planetId: strin
   if (!check.ok) return check;
   const planet = planetOf(state, planetId);
   if (!planet) return { ok: false, reason: 'Unknown planet.' };
+  const sys = state.systemStates[planet.systemId];
+  if (!sys) return { ok: false, reason: 'Unknown system.' };
   const id = colonyIdFor(planetId);
   let next = pay(state, factionId, check.cost);
   next = {
@@ -98,7 +100,10 @@ export function colonize(state: GameState, factionId: FactionId, planetId: strin
     },
     systemStates: {
       ...next.systemStates,
-      [planet.systemId]: { exploration: 'explored', ownerId: factionId },
+      [planet.systemId]: {
+        exploration: { ...sys.exploration, [factionId]: 'explored' },
+        ownerId: factionId,
+      },
     },
   };
   return {

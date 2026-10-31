@@ -73,3 +73,7 @@
   color: var(--text-2);
   text-transform: capitalize;
 }
+
+.reason {
+  color: var(--text-2);
+}

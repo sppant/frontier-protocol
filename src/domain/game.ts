@@ -40,7 +40,23 @@ export interface FactionState {
   deficit: boolean;
 }
 
-export type GameEventKind = 'colony' | 'construction' | 'economy';
+/** A scout fleet travelling hop by hop along hyperlanes to survey `targetId`. */
+export interface Fleet {
+  id: string;
+  ownerId: FactionId;
+  kind: 'scout';
+  /** Current leg: fromId → toId. */
+  fromId: string;
+  toId: string;
+  /** Systems still to visit after `toId`. */
+  remainingPath: string[];
+  /** Ticks elapsed on the current leg. */
+  progress: number;
+  legTicks: number;
+  targetId: string;
+}
+
+export type GameEventKind = 'colony' | 'construction' | 'economy' | 'exploration' | 'discovery';
 
 export interface GameEvent {
   id: string;
@@ -63,6 +79,8 @@ export interface GameState {
   systemStates: Record<string, SystemState>;
   factions: Record<FactionId, FactionState>;
   colonies: Record<string, Colony>;
+  fleets: Record<string, Fleet>;
+  nextFleetId: number;
   events: GameEvent[];
   nextEventId: number;
 }
