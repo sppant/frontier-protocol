@@ -1,6 +1,7 @@
 import { GalaxyMap } from '@/render/GalaxyMap';
 import { EventFeed } from '@/ui/panels/EventFeed';
-import { SystemInspector } from '@/ui/panels/SystemInspector';
+import { Dialogs } from '@/ui/panels/Dialogs';
+import { SidePanel } from './SidePanel';
 import { TopBar } from './TopBar';
 import styles from './AppShell.module.css';
 
@@ -13,12 +14,13 @@ export function AppShell() {
           <GalaxyMap />
         </section>
         <aside className={styles.side}>
-          <SystemInspector />
+          <SidePanel />
         </aside>
         <div className={styles.feed}>
           <EventFeed />
         </div>
       </main>
+      <Dialogs />
     </div>
   );
 }

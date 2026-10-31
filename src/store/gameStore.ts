@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import type { BuildingId, GameState } from '@/domain/game';
 import type { FactionId } from '@/domain/types';
 import { colonize, startConstruction, type CommandResult } from '@/sim/commands';
+import { resolveEvent } from '@/sim/events';
 import { launchExpedition } from '@/sim/fleets';
+import { researchTech } from '@/sim/research';
 import { createGame } from '@/sim/state';
 import { advance } from '@/sim/tick';
 
@@ -16,6 +18,8 @@ interface GameStore {
   colonize: (planetId: string) => CommandResult;
   build: (colonyId: string, building: BuildingId) => CommandResult;
   expedition: (targetId: string) => CommandResult;
+  research: (techId: string) => CommandResult;
+  resolveEvent: (choiceId: string) => CommandResult;
   newGame: (seed: number, faction: FactionId) => void;
 }
 
@@ -34,6 +38,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     build: (colonyId, building) =>
       run((g) => startConstruction(g, g.playerFaction, colonyId, building)),
     expedition: (targetId) => run((g) => launchExpedition(g, g.playerFaction, targetId)),
+    research: (techId) => run((g) => researchTech(g, g.playerFaction, techId)),
+    resolveEvent: (choiceId) => run((g) => resolveEvent(g, choiceId)),
     newGame: (seed, faction) => set({ game: createGame(seed, faction) }),
   };
 });

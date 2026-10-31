@@ -22,7 +22,7 @@ export function createGame(seed: number, playerFaction: FactionId): GameState {
   const galaxy = generateGalaxy(seed);
   const factions = {} as Record<FactionId, FactionState>;
   for (const id of FACTION_IDS) {
-    factions[id] = { id, resources: { ...STARTING_RESOURCES }, deficit: false };
+    factions[id] = { id, resources: { ...STARTING_RESOURCES }, deficit: false, techs: [] };
   }
   const colonies: Record<string, Colony> = {};
   for (const system of galaxy.systems) {
@@ -53,6 +53,11 @@ export function createGame(seed: number, playerFaction: FactionId): GameState {
     nextFleetId: 1,
     events: [],
     nextEventId: 1,
+    rngState: seed,
+    pendingEvent: null,
+    seenEvents: [],
+    storyStage: 0,
+    victory: null,
   };
 }
 

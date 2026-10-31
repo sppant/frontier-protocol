@@ -1,8 +1,11 @@
 import { BUILDINGS } from '@/domain/buildings';
-import { FACTION_IDS, FACTIONS } from '@/domain/factions';
+import { FACTION_IDS } from '@/domain/factions';
 import type { Colony, FactionState, GameState } from '@/domain/game';
 import type { FactionId } from '@/domain/types';
+import { maybeTriggerEvent } from './events';
 import { advanceFleets } from './fleets';
+import { modifiersFor } from './modifiers';
+import { checkVictory } from './victory';
 import { factionReport, growPopulation, planetOf } from './economy';
 import { withEvent } from './state';
 
@@ -23,12 +26,14 @@ function advanceFaction(state: GameState, id: FactionId): FactionState {
 
 /**
  * Advance the simulation by exactly one tick (one game day).
- * Order: income/upkeep from start-of-tick state → construction → population growth → tick++ → fleet movement.
+ * Order: income/upkeep from start-of-tick state → construction → population growth → tick++ → fleet movement → events → victory check.
  */
 export function tick(state: GameState): GameState {
+  if (state.victory) return state; // match is over
   const factions = { ...state.factions };
   for (const id of FACTION_IDS) factions[id] = advanceFaction(state, id);
 
+  const growth = Object.fromEntries(FACTION_IDS.map((id) => [id, modifiersFor(state, id).growth]));
   const colonies: Record<string, Colony> = {};
   const completed: { colony: Colony; building: keyof typeof BUILDINGS }[] = [];
   for (const colony of Object.values(state.colonies)) {
@@ -45,7 +50,7 @@ export function tick(state: GameState): GameState {
       }
     }
     if (planet) {
-      const population = growPopulation(next, planet, FACTIONS[next.ownerId].modifiers.growth);
+      const population = growPopulation(next, planet, growth[next.ownerId] ?? 1);
       if (population !== next.population) next = { ...next, population };
     }
     colonies[colony.id] = next;
@@ -65,6 +70,16 @@ export function tick(state: GameState): GameState {
     if (factions[id].deficit && !state.factions[id].deficit) {
       next = withEvent(next, 'economy', id, 'Credit deficit: upkeep exceeds available credits.');
     }
+  }
+  next = maybeTriggerEvent(next);
+  const victory = checkVictory(next);
+  if (victory) {
+    next = withEvent(
+      { ...next, victory, pendingEvent: null },
+      'victory',
+      victory.winner,
+      `Victory: ${victory.kind}.`,
+    );
   }
   return next;
 }

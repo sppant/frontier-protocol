@@ -1,0 +1,9 @@
+.side {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.side > section {
+  flex: 1;
+}

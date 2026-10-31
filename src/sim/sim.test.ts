@@ -6,6 +6,7 @@ import type { FactionId } from '@/domain/types';
 import { advanceClock, MAX_TICKS_PER_STEP, TICK_MS } from './clock';
 import { checkBuild, checkColonize, colonize, colonyCost, startConstruction } from './commands';
 import { colonyCapacity, colonyReport, factionReport, growPopulation, planetOf } from './economy';
+import { modifiersFor } from './modifiers';
 import { colonyIdFor, createGame } from './state';
 import { advance, tick } from './tick';
 
@@ -71,12 +72,16 @@ describe('economy', () => {
   it('computes colony production and upkeep from population and buildings', () => {
     const g = newGame('veydran'); // minerals ×1.2, credits ×0.95
     const { colony, planet } = homeOf(g, 'veydran');
-    const bare = colonyReport(colony, planet);
+    const bare = colonyReport(colony, planet, modifiersFor(g, 'veydran'));
     expect(bare.production.credits).toBeCloseTo(6 * 0.5 * 0.95);
     expect(bare.production.minerals).toBe(0);
     expect(bare.upkeep).toBeCloseTo(1);
 
-    const withMine = colonyReport({ ...colony, buildings: ['mine'] }, planet);
+    const withMine = colonyReport(
+      { ...colony, buildings: ['mine'] },
+      planet,
+      modifiersFor(g, 'veydran'),
+    );
     expect(withMine.production.minerals).toBeCloseTo((2 + planet.minerals) * 1.2);
     expect(withMine.upkeep).toBeCloseTo(1 + BUILDINGS.mine.upkeep);
   });
@@ -86,10 +91,11 @@ describe('economy', () => {
     const terran = newGame('terran');
     const lab = (g: GameState, f: FactionId) => {
       const { colony, planet } = homeOf(g, f);
-      return colonyReport({ ...colony, buildings: ['lab'] }, planet).production.research;
+      return colonyReport({ ...colony, buildings: ['lab'] }, planet, modifiersFor(g, f)).production
+        .research;
     };
     expect(lab(helion, 'helion')).toBeGreaterThan(lab(terran, 'terran'));
-    expect(colonyCost('terran').credits).toBeLessThan(colonyCost('oracle').credits);
+    expect(colonyCost(helion, 'terran').credits).toBeLessThan(colonyCost(helion, 'oracle').credits);
   });
 
   it('factionReport nets upkeep out of credits', () => {
@@ -237,7 +243,7 @@ describe('colonization', () => {
     const res = colonize(rich, 'terran', planet.id);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    const cost = colonyCost('terran');
+    const cost = colonyCost(rich, 'terran');
     expect(res.state.factions.terran.resources.credits).toBe(before.credits - cost.credits);
     expect(res.state.factions.terran.resources.minerals).toBe(before.minerals - cost.minerals);
     expect(res.state.colonies[colonyIdFor(planet.id)]).toMatchObject({
@@ -250,8 +256,9 @@ describe('colonization', () => {
   });
 
   it('is cheaper for the Terran Directorate than the Oracles', () => {
-    expect(colonyCost('terran').credits).toBe(96);
-    expect(colonyCost('oracle').credits).toBe(132);
+    const g = newGame();
+    expect(colonyCost(g, 'terran').credits).toBe(96);
+    expect(colonyCost(g, 'oracle').credits).toBe(132);
   });
 });
 

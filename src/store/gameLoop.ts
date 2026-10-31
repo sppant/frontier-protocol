@@ -13,6 +13,11 @@ export function startGameLoop(): () => void {
   let last = performance.now();
   const id = setInterval(() => {
     const now = performance.now();
+    const { game } = useGameStore.getState();
+    // A pending decision or a finished match halts time until the player acts.
+    if ((game.pendingEvent || game.victory) && !useClockStore.getState().paused) {
+      useClockStore.setState({ paused: true });
+    }
     const { paused, speed } = useClockStore.getState();
     const step = advanceClock(acc, now - last, speed, paused);
     last = now;

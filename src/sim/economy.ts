@@ -1,7 +1,8 @@
 import { BUILDINGS } from '@/domain/buildings';
-import { FACTIONS } from '@/domain/factions';
+import type { FactionModifiers } from '@/domain/factions';
 import type { Colony, GameState, Resources } from '@/domain/game';
 import type { FactionId, Planet } from '@/domain/types';
+import { modifiersFor } from './modifiers';
 
 export const MIN_COLONY_HABITABILITY = 20;
 const BASE_TAX_PER_POP = 0.5;
@@ -26,8 +27,7 @@ export interface ColonyReport {
 }
 
 /** Per-tick output of one colony. Pure and inspectable. */
-export function colonyReport(colony: Colony, planet: Planet): ColonyReport {
-  const mods = FACTIONS[colony.ownerId].modifiers;
+export function colonyReport(colony: Colony, planet: Planet, mods: FactionModifiers): ColonyReport {
   const pop = Math.floor(colony.population);
   const raw = emptyResources();
   raw.credits += pop * BASE_TAX_PER_POP;
@@ -67,10 +67,11 @@ export function factionReport(state: GameState, factionId: FactionId): FactionRe
   const net = emptyResources();
   let upkeep = 0;
   const colonies: ColonyReport[] = [];
+  const mods = modifiersFor(state, factionId);
   for (const colony of factionColonies(state, factionId)) {
     const planet = planetOf(state, colony.planetId);
     if (!planet) continue;
-    const r = colonyReport(colony, planet);
+    const r = colonyReport(colony, planet, mods);
     colonies.push(r);
     net.credits += r.production.credits;
     net.minerals += r.production.minerals;

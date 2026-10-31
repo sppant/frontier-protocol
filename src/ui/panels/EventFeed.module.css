@@ -54,3 +54,14 @@
 .exploration {
   color: var(--text-0);
 }
+.research {
+  color: var(--res-research);
+}
+.story {
+  color: var(--text-1);
+  font-style: italic;
+}
+.victory {
+  color: var(--accent);
+  font-weight: 600;
+}

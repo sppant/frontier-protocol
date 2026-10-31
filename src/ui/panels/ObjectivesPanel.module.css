@@ -1,0 +1,49 @@
+.chapter {
+  margin: var(--sp-1) 0 var(--sp-4);
+  font-size: var(--text-lg);
+  color: var(--accent);
+}
+.paths {
+  list-style: none;
+  margin: var(--sp-2) 0 var(--sp-4);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.row {
+  display: flex;
+  justify-content: space-between;
+}
+.bar {
+  height: 4px;
+  background: var(--bg-3);
+  margin: var(--sp-1) 0;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.desc {
+  margin: 0;
+  color: var(--text-2);
+}
+.table {
+  width: 100%;
+  margin-top: var(--sp-2);
+  border-collapse: collapse;
+}
+.table th {
+  text-align: left;
+  color: var(--text-2);
+  font-weight: 400;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.table th,
+.table td {
+  padding: var(--sp-1) var(--sp-2) var(--sp-1) 0;
+  border-bottom: 1px solid var(--line);
+}

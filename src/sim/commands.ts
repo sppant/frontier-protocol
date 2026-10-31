@@ -1,5 +1,6 @@
 import { BUILDINGS } from '@/domain/buildings';
 import { FACTIONS } from '@/domain/factions';
+import { modifiersFor } from './modifiers';
 import type { BuildingId, GameState, Resources } from '@/domain/game';
 import { explorationOf, type FactionId } from '@/domain/types';
 import { MIN_COLONY_HABITABILITY, planetOf } from './economy';
@@ -11,8 +12,8 @@ export const MAX_QUEUE = 3;
 export type Check<T = object> = ({ ok: true } & T) | { ok: false; reason: string };
 export type CommandResult = { ok: true; state: GameState } | { ok: false; reason: string };
 
-export function colonyCost(factionId: FactionId): Resources {
-  const m = FACTIONS[factionId].modifiers.colonyCost;
+export function colonyCost(state: GameState, factionId: FactionId): Resources {
+  const m = modifiersFor(state, factionId).colonyCost;
   return {
     credits: Math.round(BASE_COLONY_COST.credits * m),
     minerals: Math.round(BASE_COLONY_COST.minerals * m),
@@ -69,7 +70,7 @@ export function checkColonize(
     });
     if (!adjacent) return { ok: false, reason: 'Must be in or adjacent to your territory.' };
   }
-  const cost = colonyCost(factionId);
+  const cost = colonyCost(state, factionId);
   if (!canAfford(state.factions[factionId].resources, cost))
     return { ok: false, reason: 'Insufficient resources.' };
   return { ok: true, cost };

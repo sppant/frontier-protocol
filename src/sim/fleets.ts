@@ -2,6 +2,7 @@ import { FACTIONS } from '@/domain/factions';
 import type { Fleet, GameState, Resources } from '@/domain/game';
 import { explorationOf, type FactionId, type Galaxy, type Vec3 } from '@/domain/types';
 import type { Check, CommandResult } from './commands';
+import { modifiersFor, surveyReachFor } from './modifiers';
 import { withEvent } from './state';
 
 /** World units a fleet travels per tick. */
@@ -22,8 +23,8 @@ export function laneLength(galaxy: Galaxy, a: string, b: string): number {
   return Math.hypot(pa[0] - pb[0], pa[1] - pb[1], pa[2] - pb[2]);
 }
 
-export function travelTicks(galaxy: Galaxy, a: string, b: string): number {
-  return Math.max(1, Math.ceil(laneLength(galaxy, a, b) / FLEET_SPEED));
+export function travelTicks(galaxy: Galaxy, a: string, b: string, speed = 1): number {
+  return Math.max(1, Math.ceil(laneLength(galaxy, a, b) / (FLEET_SPEED * speed)));
 }
 
 /** Shortest path along hyperlanes (by distance), inclusive of both ends; null if unreachable. */
@@ -88,9 +89,10 @@ function planExpedition(
     if (!best || len < best.len) best = { path, len };
   }
   if (!best) return null;
+  const speed = modifiersFor(state, factionId).fleetSpeed;
   const eta = best.path
     .slice(1)
-    .reduce((sum, id, i) => sum + travelTicks(state.galaxy, best.path[i] as string, id), 0);
+    .reduce((sum, id, i) => sum + travelTicks(state.galaxy, best.path[i] as string, id, speed), 0);
   return { originId: best.path[0] as string, path: best.path, eta, cost: EXPEDITION_COST };
 }
 
@@ -122,6 +124,7 @@ export function launchExpedition(
   const check = checkExpedition(state, factionId, targetId);
   if (!check.ok) return check;
   const { path, cost } = check.plan;
+  const speed = modifiersFor(state, factionId).fleetSpeed;
   const id = `fleet-${state.nextFleetId}`;
   const f = state.factions[factionId];
   const fleet: Fleet = {
@@ -132,7 +135,8 @@ export function launchExpedition(
     toId: path[1] as string,
     remainingPath: path.slice(2),
     progress: 0,
-    legTicks: travelTicks(state.galaxy, path[0] as string, path[1] as string),
+    legTicks: travelTicks(state.galaxy, path[0] as string, path[1] as string, speed),
+    speed,
     targetId,
   };
   const next: GameState = {
@@ -164,7 +168,7 @@ export function fleetEta(galaxy: Galaxy, fleet: Fleet): number {
   let eta = fleet.legTicks - fleet.progress;
   let from = fleet.toId;
   for (const next of fleet.remainingPath) {
-    eta += travelTicks(galaxy, from, next);
+    eta += travelTicks(galaxy, from, next, fleet.speed);
     from = next;
   }
   return eta;
@@ -195,12 +199,27 @@ function surveyed(state: GameState, fleet: Fleet): GameState {
   const target = states[system.id];
   if (target)
     states[system.id] = { ...target, exploration: { ...target.exploration, [f]: 'explored' } };
-  for (const [a, b] of state.galaxy.lanes) {
-    const other = a === system.id ? b : b === system.id ? a : null;
-    const st = other ? states[other] : undefined;
-    if (other && st && st.exploration[f] === 'unknown') {
-      states[other] = { ...st, exploration: { ...st.exploration, [f]: 'detected' } };
+  // Reveal systems within `reach` hops (breadth-first) that the faction knows nothing about.
+  const reach = surveyReachFor(state, f);
+  let frontier = [system.id];
+  const visited = new Set(frontier);
+  for (let hop = 0; hop < reach; hop++) {
+    const nextFrontier: string[] = [];
+    for (const [a, b] of state.galaxy.lanes) {
+      for (const [from, to] of [
+        [a, b],
+        [b, a],
+      ] as const) {
+        if (!frontier.includes(from) || visited.has(to)) continue;
+        visited.add(to);
+        nextFrontier.push(to);
+        const st = states[to];
+        if (st && st.exploration[f] === 'unknown') {
+          states[to] = { ...st, exploration: { ...st.exploration, [f]: 'detected' } };
+        }
+      }
     }
+    frontier = nextFrontier;
   }
   let next: GameState = { ...state, systemStates: states };
   const count = system.planetIds.length;
@@ -258,7 +277,7 @@ export function advanceFleets(state: GameState): GameState {
       toId: hop,
       remainingPath: rest,
       progress: 0,
-      legTicks: travelTicks(state.galaxy, fleet.toId, hop),
+      legTicks: travelTicks(state.galaxy, fleet.toId, hop, fleet.speed),
     };
   }
   return { ...next, fleets };

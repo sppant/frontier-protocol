@@ -25,7 +25,17 @@ test('simulation advances and building changes the economy', async ({ page }) =>
   await expect(page.getByTestId('game-day')).toHaveText('Day 0');
   await page.getByRole('button', { name: 'Speed 4x' }).click();
   await page.getByRole('button', { name: 'Resume' }).click();
-  await expect(page.getByTestId('game-day')).not.toHaveText('Day 0', { timeout: 3000 });
+
+  // Day 1 brings the First Contact event: time halts until the player decides.
+  const dialog = page.getByRole('dialog', { name: 'First Contact' });
+  await expect(dialog).toBeVisible({ timeout: 5000 });
+  await expect(page.getByTestId('sim-status')).toHaveText('Paused');
+  await expect(page.getByRole('button', { name: 'Resume' })).toBeDisabled();
+  await dialog.getByRole('button', { name: /Conserve resources/ }).click();
+  await expect(dialog).toBeHidden();
+
+  await page.getByRole('button', { name: 'Resume' }).click();
+  await expect(page.getByTestId('game-day')).not.toHaveText('Day 1', { timeout: 3000 });
   await page.getByRole('button', { name: 'Pause' }).click();
 
   // Paused: the day must stop changing.
@@ -56,8 +66,24 @@ test('expedition reveals a new system and shows in the feed', async ({ page }) =
   // Back to 3D to check the fleet renders without errors.
   await page.getByRole('button', { name: 'Simple map' }).click();
   await page.getByRole('button', { name: 'Resume' }).click();
+  await page.getByRole('dialog', { name: 'First Contact' }).getByRole('button').first().click();
+  await page.getByRole('button', { name: 'Resume' }).click();
   await page.waitForTimeout(1200);
   await page.screenshot({ path: process.env.SHOT ?? 'test-results/fleet.png' });
   await expect(page.getByText(/surveyed/)).toBeVisible({ timeout: 25_000 });
   await expect(page.getByRole('list', { name: 'Active expeditions' })).toBeHidden();
+});
+
+test('research tab: techs are gated by research points and apply on purchase', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Research' }).click();
+  const deepCore = page
+    .locator('li')
+    .filter({ has: page.getByText('Deep Core Extraction', { exact: true }) });
+  await expect(deepCore.getByRole('button', { name: 'Research' })).toBeDisabled();
+  await expect(deepCore).toContainText('Needs 40 research');
+
+  await page.getByRole('tab', { name: 'Objectives' }).click();
+  await expect(page.getByText('Nexus Ascendancy')).toBeVisible();
+  await expect(page.getByRole('table', { name: 'Standings' })).toBeVisible();
 });

@@ -38,6 +38,7 @@ export interface FactionState {
   resources: Resources;
   /** True if upkeep could not be paid last tick. */
   deficit: boolean;
+  techs: TechId[];
 }
 
 /** A scout fleet travelling hop by hop along hyperlanes to survey `targetId`. */
@@ -53,10 +54,36 @@ export interface Fleet {
   /** Ticks elapsed on the current leg. */
   progress: number;
   legTicks: number;
+  /** Speed multiplier locked in at launch. */
+  speed: number;
   targetId: string;
 }
 
-export type GameEventKind = 'colony' | 'construction' | 'economy' | 'exploration' | 'discovery';
+export type GameEventKind =
+  | 'colony'
+  | 'construction'
+  | 'economy'
+  | 'exploration'
+  | 'discovery'
+  | 'research'
+  | 'story'
+  | 'victory';
+
+export type TechId = string;
+
+export type VictoryKind = 'ascendancy' | 'dominion' | 'score';
+
+export interface Victory {
+  winner: FactionId;
+  kind: VictoryKind;
+  tick: number;
+}
+
+/** A narrative/random event awaiting the player's choice. */
+export interface PendingEvent {
+  eventId: string;
+  tick: number;
+}
 
 export interface GameEvent {
   id: string;
@@ -83,4 +110,13 @@ export interface GameState {
   nextFleetId: number;
   events: GameEvent[];
   nextEventId: number;
+  /** Resumable PRNG state for gameplay randomness (events). */
+  rngState: number;
+  /** Player-facing event awaiting a decision; null if none. */
+  pendingEvent: PendingEvent | null;
+  /** Ids of random events already shown (each fires once). */
+  seenEvents: string[];
+  /** Index of the next story chapter event to fire. */
+  storyStage: number;
+  victory: Victory | null;
 }

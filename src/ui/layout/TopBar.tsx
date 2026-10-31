@@ -47,7 +47,9 @@ function ResourceBar() {
 export function TopBar() {
   const faction = FACTIONS[useGameStore((s) => s.game.playerFaction)];
   const day = useGameStore((s) => s.game.tick);
-  const paused = useClockStore((s) => s.paused);
+  const blocked = useGameStore((s) => !!(s.game.pendingEvent || s.game.victory));
+  const clockPaused = useClockStore((s) => s.paused);
+  const paused = clockPaused || blocked;
   const speed = useClockStore((s) => s.speed);
   const togglePause = useClockStore((s) => s.togglePause);
   const setSpeed = useClockStore((s) => s.setSpeed);
@@ -69,7 +71,13 @@ export function TopBar() {
         <span className="label" data-testid="sim-status">
           {paused ? 'Paused' : 'Running'}
         </span>
-        <Button onClick={togglePause} variant="primary" aria-label={paused ? 'Resume' : 'Pause'}>
+        <Button
+          onClick={togglePause}
+          variant="primary"
+          disabled={blocked}
+          title={blocked ? 'A decision is waiting' : undefined}
+          aria-label={paused ? 'Resume' : 'Pause'}
+        >
           {paused ? '▶ Resume' : '❚❚ Pause'}
         </Button>
         {SPEEDS.map((s) => (

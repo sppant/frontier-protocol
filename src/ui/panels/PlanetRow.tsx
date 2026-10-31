@@ -5,6 +5,7 @@ import type { Planet } from '@/domain/types';
 import { PLANET_COLORS } from '@/render/visuals';
 import { checkBuild, checkColonize } from '@/sim/commands';
 import { colonyCapacity, colonyReport } from '@/sim/economy';
+import { modifiersFor } from '@/sim/modifiers';
 import { colonyIdFor } from '@/sim/state';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/ui/primitives';
@@ -50,7 +51,7 @@ export function PlanetRow({ planet }: { planet: Planet }) {
             <>
               <span className={`mono ${styles.dim}`}>
                 {(() => {
-                  const r = colonyReport(colony, planet);
+                  const r = colonyReport(colony, planet, modifiersFor(game, colony.ownerId));
                   return `+${r.production.credits.toFixed(1)}¢ +${r.production.minerals.toFixed(1)}⛏ +${r.production.research.toFixed(1)}⚗ −${r.upkeep.toFixed(1)}¢`;
                 })()}
               </span>
