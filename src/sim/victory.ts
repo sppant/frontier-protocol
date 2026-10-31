@@ -6,6 +6,8 @@ import { factionColonies } from './economy';
 
 /** Systems needed to win by Dominion (out of 16). */
 export const DOMINION_SYSTEMS = 10;
+/** Days a faction needs to complete Nexus Attunement once it has researched it. */
+export const ATTUNEMENT_DAYS = 100;
 /** Day on which the match is decided by score if nobody has won. */
 export const TIME_LIMIT = 720;
 
@@ -24,7 +26,8 @@ export function score(state: GameState, factionId: FactionId): number {
 }
 
 export interface VictoryProgress {
-  ascendancy: { done: boolean; techsDone: number; techsNeeded: number };
+  /** `completesAt` is the day this faction's attunement finishes, if begun. */
+  ascendancy: { done: boolean; techsDone: number; techsNeeded: number; completesAt: number | null };
   dominion: { owned: number; needed: number };
   daysLeft: number;
 }
@@ -42,6 +45,7 @@ export function victoryProgress(state: GameState, factionId: FactionId): Victory
   return {
     ascendancy: {
       done: !!capstone && owned.includes(capstone.id),
+      completesAt: state.factions[factionId].attunementDone,
       techsDone: [...chain].filter((id) => owned.includes(id)).length,
       techsNeeded: chain.size,
     },
@@ -53,12 +57,13 @@ export function victoryProgress(state: GameState, factionId: FactionId): Victory
 /** Evaluate victory for all factions. Ties resolve in canonical faction order. */
 export function checkVictory(state: GameState): Victory | null {
   if (state.victory) return state.victory;
-  const capstone = TECHS.find((t) => t.capstone);
-  for (const f of FACTION_IDS) {
-    if (capstone && state.factions[f].techs.includes(capstone.id)) {
-      return { winner: f, kind: 'ascendancy', tick: state.tick };
-    }
-  }
+  const attuned = FACTION_IDS.filter((f) => {
+    const done = state.factions[f].attunementDone;
+    return done !== null && done <= state.tick;
+  }).sort(
+    (a, b) => (state.factions[a].attunementDone ?? 0) - (state.factions[b].attunementDone ?? 0),
+  );
+  if (attuned[0]) return { winner: attuned[0], kind: 'ascendancy', tick: state.tick };
   for (const f of FACTION_IDS) {
     if (systemsOwned(state, f) >= DOMINION_SYSTEMS) {
       return { winner: f, kind: 'dominion', tick: state.tick };

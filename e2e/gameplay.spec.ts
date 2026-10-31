@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { runUntil } from './helpers';
 
 test('simulation advances and building changes the economy', async ({ page }) => {
   await page.goto('/');
@@ -34,6 +35,7 @@ test('simulation advances and building changes the economy', async ({ page }) =>
   await dialog.getByRole('button', { name: /Conserve resources/ }).click();
   await expect(dialog).toBeHidden();
 
+  await page.getByRole('button', { name: 'Speed 1x' }).click();
   await page.getByRole('button', { name: 'Resume' }).click();
   await expect(page.getByTestId('game-day')).not.toHaveText('Day 1', { timeout: 3000 });
   await page.getByRole('button', { name: 'Pause' }).click();
@@ -70,7 +72,12 @@ test('expedition reveals a new system and shows in the feed', async ({ page }) =
   await page.getByRole('button', { name: 'Resume' }).click();
   await page.waitForTimeout(1200);
   await page.screenshot({ path: process.env.SHOT ?? 'test-results/fleet.png' });
-  await expect(page.getByText(/surveyed/)).toBeVisible({ timeout: 25_000 });
+  await runUntil(page, () =>
+    page
+      .getByText(/surveyed/)
+      .first()
+      .isVisible(),
+  );
   await expect(page.getByRole('list', { name: 'Active expeditions' })).toBeHidden();
 });
 
@@ -86,4 +93,13 @@ test('research tab: techs are gated by research points and apply on purchase', a
   await page.getByRole('tab', { name: 'Objectives' }).click();
   await expect(page.getByText('Nexus Ascendancy')).toBeVisible();
   await expect(page.getByRole('table', { name: 'Standings' })).toBeVisible();
+});
+
+test('rival bots act on their own and explain their decisions', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Speed 4x' }).click();
+  await page.getByRole('tab', { name: 'Rival activity' }).click();
+  const list = page.getByRole('list', { name: 'Rival activity' });
+  await runUntil(page, () => list.isVisible());
+  await expect(list.getByRole('listitem').first()).toContainText(/Pioneer|Warlord|Oracle|Merchant/);
 });

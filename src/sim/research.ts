@@ -1,8 +1,10 @@
+import { FACTIONS } from '@/domain/factions';
 import { TECH_BY_ID } from '@/domain/techs';
 import type { TechId } from '@/domain/game';
 import type { GameState } from '@/domain/game';
 import type { FactionId } from '@/domain/types';
 import type { Check, CommandResult } from './commands';
+import { ATTUNEMENT_DAYS } from './victory';
 import { withEvent } from './state';
 
 /** Why (or whether) a faction may research a technology right now. */
@@ -45,10 +47,22 @@ export function researchTech(
       [factionId]: {
         ...f,
         techs: [...f.techs, techId],
+        attunementDone: tech.capstone ? state.tick + ATTUNEMENT_DAYS : f.attunementDone,
         resources: { ...f.resources, research: f.resources.research - tech.cost },
       },
     },
   };
+  if (tech.capstone) {
+    return {
+      ok: true,
+      state: withEvent(
+        next,
+        'victory',
+        factionId,
+        `${FACTIONS[factionId].name} has begun attuning to the Nexus. Ascendancy on day ${state.tick + ATTUNEMENT_DAYS}.`,
+      ),
+    };
+  }
   return {
     ok: true,
     state: withEvent(next, 'research', factionId, `Research complete: ${tech.name}.`),

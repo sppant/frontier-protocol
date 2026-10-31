@@ -24,7 +24,7 @@ React 19 · TypeScript (pinned `~6.0`: typescript-eslint doesn't support TS 7 ye
 ## Simulation rules (current)
 
 - 1 tick = 1 game day; 1× speed = 1 tick/second (`TICK_MS`), 2×/4× scale it; paused = no ticks. Catch-up capped at 30 ticks/step.
-- Tick order: income & upkeep (from start-of-tick state) → construction → population growth → `tick++` → fleet movement → events → victory check. Credits clamp at 0 and set `deficit` (one event on entry).
+- Tick order: income & upkeep (from start-of-tick state) → construction → population growth → `tick++` → fleet movement → events → victory check; then (engine) bot decisions. Credits clamp at 0 and set `deficit` (one event on entry).
 - Resources: credits (tax 0.5/pop, trade hub), minerals (mine: 2 + planet richness), research (lab: 1 + 0.25/pop). Colony upkeep 1¢ + 0.5¢/building. Faction `modifiers` (`domain/factions.ts`) scale output, colony cost, growth and upkeep.
 - Colonize: planet habitability ≥ 20, system explored, not controlled by another faction, in/adjacent to own territory, cost 120¢ + 60⛏ × faction `colonyCost`. Colonization is instant for now; Phase 4 will route it through expeditions/fleets.
 - Expeditions: target must be `detected` (adjacent to explored); cost 40¢; scout flies from the nearest owned system along hyperlanes at 3 units/tick (≥1 tick/hop); consumed on arrival. Fleets move _after_ the economy step in a tick.
@@ -32,6 +32,16 @@ React 19 · TypeScript (pinned `~6.0`: typescript-eslint doesn't support TS 7 ye
 - Events: story events fire in order at days 1/40/90/150/220/300 (chapters First Contact…Convergence); random events roll every 12 days at 40%, each once per game, using `GameState.rngState`. Events affect the player only (bots don't receive/decide events). One pending event at a time; choices must be affordable.
 - Tech: instant unlock on payment (no queue); unique tech per faction; modifiers are base × product of tech multipliers.
 - Victory (checked every tick, first in faction order wins ties): Ascendancy (capstone tech), Dominion (≥10 owned systems), Hegemony (best `score` = 10/system + pop + 5/tech at day 720). `tick` is a no-op once `victory` is set.
+
+## Bot rules (current)
+
+- Layering: `bots/` depends on `sim/`; `sim/` never imports bots. Always run the game through `engine/step.ts` (`advanceGame`/`newGame`); `sim/tick` alone has no bots.
+- Personalities: Pioneer (explore/expand), Merchant (economy), Warlord (contested frontier + minerals; no combat exists yet, so "military" = territorial claims), Oracle (research, safe interior, Ascendancy). Default per faction: terran=merchant, helion=pioneer, veydran=warlord, oracle=oracle; the player's faction gets no bot.
+- Difficulty (no resource bonuses): easy = decide every 10d, 1 action, ±35% score noise, no reserve, no objective; normal = 6d, 2 actions, ±12%, 20¢ reserve, objective; hard = 4d, 3 actions, no noise, 40¢ reserve, objective (+ capstone-chain bonus for Ascendancy).
+- Safeguards learned from simulation: keep one mine's worth of minerals until a mine exists (minerals only come from mines); max 2 concurrent expeditions; no colonizing into a credit deficit; minimum utility 0.2; bots hold their turn while a player decision is pending.
+- Decisions are due at `nextDecisionTick` (staggered per faction), never per frame.
+- Ascendancy: capstone research starts a public 100-day Nexus Attunement (`attunementDone`); first to complete wins. Gated to story stage 6 (day 300). Lab output was tuned down (1 + 0.12/pop) after headless sims showed research hoarding.
+- Balance notes (headless 720-day sims, 10 seeds): bots reach the capstone at ~day 300 and win Ascendancy ~day 400 if unopposed; the map saturates (all habitable planets claimed) by ~day 200, so early claiming decides Dominion. Phase 8 should re-tune against human play.
 
 ## Map ↔ state boundary
 
@@ -61,8 +71,9 @@ Remote `origin` = https://github.com/sppant/frontier-protocol.git, branch `main`
 - [x] Phase 3 simulation core: `GameState` (serializable, `domain/game.ts`), `createGame(seed, faction)`, pure `tick`/`advance`, economy (`colonyReport`/`factionReport`, logistic population growth), commands (`checkColonize`/`colonize`, `checkBuild`/`startConstruction`), wall-clock `advanceClock` driven by `store/gameLoop.ts` (setInterval 100ms, not rAF). `gameStore` holds the state; `selectionStore` holds map selection. Top bar shows resources + net/day + day counter; inspector offers Colonize/Build with reasons on disabled buttons.
 - [x] Phase 4a exploration: fog of war is **per faction** (`SystemState.exploration: Record<FactionId, ExplorationStatus>`; read via `explorationOf` / `useExploration()`), scout expeditions (`sim/fleets.ts`: Dijkstra `findPath`, `checkExpedition`/`launchExpedition`, `advanceFleets`, `fleetEta`/`fleetPosition`/`fleetRoute`), survey reveals the system + detects neighbours, anomalies pay research. `EventFeed` (player events + active expeditions), fleet markers in 3D and SVG maps.
 - [x] Phase 4b progression: techs (`domain/techs.ts`, bought with the research stockpile; effects multiply faction modifiers via `sim/modifiers.ts#modifiersFor`; capstone `nexusAttunement` gated by story stage 5), story chapters + random events with choices (`domain/events.ts`, `sim/events.ts`; seeded `rngState` lives in `GameState`), victory (`sim/victory.ts`: Ascendancy / Dominion 10 systems / Hegemony score at day 720; applies to every faction). UI: tabbed `SidePanel` (Inspector/Research/Objectives), `Dialogs` (event + victory). Game loop auto-pauses on pending event / victory; Resume is disabled meanwhile.
+- [x] Phase 5 bots: `bots/` (pure utility AI: `personalities.ts` weights + difficulty defs, `candidates.ts` legal-action generation & scoring, `decide.ts` decision round + objective + log) and `engine/step.ts` (`step` = `tick` then bots; `advanceGame` stops at a pending decision/victory; `newGame`/`withBots`). Bots act only via the same commands as the player (colonize/build/research/expedition). `GameState.bots[faction]` holds personality, difficulty, private `rngState`, `nextDecisionTick`, objective, capped decision `log` (label, utility, top-2 factors, 3 alternatives). UI: "Rival activity" feed tab.
 - [ ] Phase 4 (rest) gameplay · Phase 5 bots · Phase 6 full UI · Phase 7 persistence/polish · Phase 8 verification.
 
 ## Known limitations / next
 
-Bots not yet built (so rivals don't act yet); no persistence yet; WebGL canvas itself is verified only via Playwright (jsdom has no WebGL). Vite 8 uses Rolldown, so `manualChunks` object form is unsupported; revisit chunk splitting if bundle size matters.
+No combat/diplomacy; no persistence/onboarding yet; no persistence yet; WebGL canvas itself is verified only via Playwright (jsdom has no WebGL). Vite 8 uses Rolldown, so `manualChunks` object form is unsupported; revisit chunk splitting if bundle size matters.

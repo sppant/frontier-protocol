@@ -5,8 +5,7 @@ import { colonize, startConstruction, type CommandResult } from '@/sim/commands'
 import { resolveEvent } from '@/sim/events';
 import { launchExpedition } from '@/sim/fleets';
 import { researchTech } from '@/sim/research';
-import { createGame } from '@/sim/state';
-import { advance } from '@/sim/tick';
+import { advanceGame, newGame } from '@/engine/step';
 
 export const DEFAULT_SEED = 2479;
 
@@ -32,14 +31,14 @@ export const useGameStore = create<GameStore>((set, get) => {
     return result;
   };
   return {
-    game: createGame(DEFAULT_SEED, 'terran'),
-    advance: (ticks) => set((s) => ({ game: advance(s.game, ticks) })),
+    game: newGame(DEFAULT_SEED, 'terran'),
+    advance: (ticks) => set((s) => ({ game: advanceGame(s.game, ticks) })),
     colonize: (planetId) => run((g) => colonize(g, g.playerFaction, planetId)),
     build: (colonyId, building) =>
       run((g) => startConstruction(g, g.playerFaction, colonyId, building)),
     expedition: (targetId) => run((g) => launchExpedition(g, g.playerFaction, targetId)),
     research: (techId) => run((g) => researchTech(g, g.playerFaction, techId)),
     resolveEvent: (choiceId) => run((g) => resolveEvent(g, choiceId)),
-    newGame: (seed, faction) => set({ game: createGame(seed, faction) }),
+    newGame: (seed, faction) => set({ game: newGame(seed, faction) }),
   };
 });

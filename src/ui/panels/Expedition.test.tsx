@@ -12,7 +12,8 @@ import { SystemInspector } from './SystemInspector';
 
 describe('expedition workflow', () => {
   beforeEach(() => {
-    useGameStore.setState({ game: createGame(2479, 'terran') });
+    // Story events would pause the batch at day 1; this test is about expeditions.
+    useGameStore.setState({ game: { ...createGame(2479, 'terran'), storyStage: 99 } });
     useSelectionStore.setState({ selectedId: null, hoveredId: null });
   });
 

@@ -65,3 +65,7 @@
   color: var(--accent);
   font-weight: 600;
 }
+
+.why {
+  color: var(--text-2);
+}

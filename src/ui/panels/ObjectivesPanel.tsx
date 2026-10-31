@@ -24,6 +24,10 @@ export function ObjectivesPanel() {
   const player = game.playerFaction;
   const p = victoryProgress(game, player);
   const chapter = CHAPTERS[Math.min(Math.max(game.storyStage - 1, 0), CHAPTERS.length - 1)];
+  const attuning = FACTION_IDS.flatMap((f) => {
+    const done = game.factions[f].attunementDone;
+    return done === null ? [] : [{ f, done }];
+  });
   const standings = [...FACTION_IDS].sort((a, b) => score(game, b) - score(game, a));
 
   return (
@@ -44,8 +48,14 @@ export function ObjectivesPanel() {
           </div>
           <Bar value={p.ascendancy.techsDone} max={p.ascendancy.techsNeeded} />
           <p className={styles.desc}>
-            Research the chain to Nexus Attunement. Unlocks after the Nexus awakens.
+            Research the chain to Nexus Attunement (unlocks at the Convergence), then hold on for
+            the 100-day attunement.
           </p>
+          {attuning.map(({ f, done }) => (
+            <p key={f} className={styles.alert}>
+              {FACTIONS[f].name} attuning — Ascendancy in {Math.max(0, done - game.tick)} days
+            </p>
+          ))}
         </li>
         <li>
           <div className={styles.row}>

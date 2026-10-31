@@ -19,7 +19,7 @@ export interface TechDef {
   mult?: Partial<Record<ModifierKey, number>>;
   /** Extra hops of neighbouring systems revealed when surveying. */
   surveyReach?: number;
-  /** Researching this wins the game (Nexus Ascendancy). */
+  /** Researching this starts Nexus Attunement; completing it wins (Ascendancy). */
   capstone?: boolean;
 }
 
@@ -91,10 +91,11 @@ export const TECHS: TechDef[] = [
   {
     id: 'nexusAttunement',
     name: 'Nexus Attunement',
-    description: 'Interface directly with the Nexus. Victory: Nexus Ascendancy.',
-    cost: 500,
+    description:
+      'Begin attuning to the Nexus. Ascendancy victory arrives 100 days later, visible to all factions.',
+    cost: 3500,
     requires: ['nexusCartography', 'quantumLabs', 'fusionGrid'],
-    requiresStory: 5,
+    requiresStory: 6,
     capstone: true,
   },
   // Faction-unique technologies

@@ -47,3 +47,8 @@
   padding: var(--sp-1) var(--sp-2) var(--sp-1) 0;
   border-bottom: 1px solid var(--line);
 }
+
+.alert {
+  margin: var(--sp-1) 0 0;
+  color: var(--danger);
+}

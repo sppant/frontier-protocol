@@ -33,7 +33,7 @@ export function colonyReport(colony: Colony, planet: Planet, mods: FactionModifi
   raw.credits += pop * BASE_TAX_PER_POP;
   for (const b of colony.buildings) {
     if (b === 'mine') raw.minerals += 2 + planet.minerals;
-    else if (b === 'lab') raw.research += 1 + pop * 0.25;
+    else if (b === 'lab') raw.research += 1 + pop * 0.12;
     else if (b === 'tradeHub') raw.credits += 2 + pop * 0.4;
   }
   const buildingUpkeep = colony.buildings.reduce((sum, b) => sum + BUILDINGS[b].upkeep, 0);

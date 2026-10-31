@@ -1,3 +1,4 @@
+import type { BotMap } from './bots';
 import type { FactionId, Galaxy, SystemState } from './types';
 
 export type ResourceId = 'credits' | 'minerals' | 'research';
@@ -39,6 +40,8 @@ export interface FactionState {
   /** True if upkeep could not be paid last tick. */
   deficit: boolean;
   techs: TechId[];
+  /** Day on which this faction's Nexus Attunement completes (Ascendancy victory); null if not started. */
+  attunementDone: number | null;
 }
 
 /** A scout fleet travelling hop by hop along hyperlanes to survey `targetId`. */
@@ -119,4 +122,6 @@ export interface GameState {
   /** Index of the next story chapter event to fire. */
   storyStage: number;
   victory: Victory | null;
+  /** Bot-controlled factions. Empty in bare sim states. */
+  bots: BotMap;
 }

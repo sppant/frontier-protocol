@@ -9,7 +9,14 @@ import { modifiersFor, surveyReachFor } from './modifiers';
 import { checkResearch, researchTech } from './research';
 import { createGame } from './state';
 import { advance, tick } from './tick';
-import { DOMINION_SYSTEMS, TIME_LIMIT, checkVictory, score, victoryProgress } from './victory';
+import {
+  ATTUNEMENT_DAYS,
+  DOMINION_SYSTEMS,
+  TIME_LIMIT,
+  checkVictory,
+  score,
+  victoryProgress,
+} from './victory';
 
 const game = (f: FactionId = 'terran') => createGame(2479, f);
 const withResearch = (g: GameState, f: FactionId, research: number): GameState => ({
@@ -56,7 +63,7 @@ describe('technology', () => {
       ok: false,
       reason: 'Needs 40 research.',
     });
-    const rich = withResearch(g, 'terran', 2000);
+    const rich = withResearch(g, 'terran', 9000);
     expect(checkResearch(rich, 'terran', 'fusionGrid')).toEqual({
       ok: false,
       reason: 'Requires Deep Core Extraction.',
@@ -88,7 +95,7 @@ describe('technology', () => {
       ok: false,
       reason: 'The Nexus has not yet awakened.',
     });
-    expect(checkResearch({ ...late, storyStage: 5 }, 'terran', 'nexusAttunement').ok).toBe(true);
+    expect(checkResearch({ ...late, storyStage: 6 }, 'terran', 'nexusAttunement').ok).toBe(true);
   });
 
   it('exploration techs change fleet speed and survey reach', () => {
@@ -203,8 +210,8 @@ describe('victory', () => {
     expect(p.daysLeft).toBe(TIME_LIMIT);
   });
 
-  it('Ascendancy: researching the capstone wins', () => {
-    let s = { ...withResearch(game(), 'helion', 5000), storyStage: 5 };
+  it('Ascendancy: the capstone starts a public 100-day attunement, then wins', () => {
+    let s = { ...withResearch(game(), 'helion', 9000), storyStage: 6 };
     for (const id of [
       'deepCore',
       'fusionGrid',
@@ -217,10 +224,33 @@ describe('victory', () => {
       s = research(s, 'helion', id);
     }
     expect(victoryProgress(s, 'helion').ascendancy.done).toBe(true);
-    expect(checkVictory(s)).toEqual({ winner: 'helion', kind: 'ascendancy', tick: 0 });
-    const done = tick(s);
-    expect(done.victory?.winner).toBe('helion');
-    expect(done.events.at(-1)!.kind).toBe('victory');
+    expect(victoryProgress(s, 'helion').ascendancy.completesAt).toBe(ATTUNEMENT_DAYS);
+    expect(s.events.at(-1)).toMatchObject({ kind: 'victory', factionId: 'helion' });
+    expect(checkVictory(s)).toBeNull(); // not yet: attunement takes time
+
+    const almost = { ...s, tick: ATTUNEMENT_DAYS - 1 };
+    expect(checkVictory(almost)).toBeNull();
+    const finished = { ...s, tick: ATTUNEMENT_DAYS };
+    expect(checkVictory(finished)).toEqual({
+      winner: 'helion',
+      kind: 'ascendancy',
+      tick: ATTUNEMENT_DAYS,
+    });
+    expect(tick({ ...s, tick: ATTUNEMENT_DAYS - 1 }).victory?.winner).toBe('helion');
+  });
+
+  it('the earlier attunement wins when two factions finish together', () => {
+    const g = game();
+    const s: GameState = {
+      ...g,
+      tick: 200,
+      factions: {
+        ...g.factions,
+        terran: { ...g.factions.terran, attunementDone: 150 },
+        oracle: { ...g.factions.oracle, attunementDone: 120 },
+      },
+    };
+    expect(checkVictory(s)?.winner).toBe('oracle');
   });
 
   it('Dominion: controlling enough systems wins', () => {
