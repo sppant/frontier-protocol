@@ -43,6 +43,15 @@ React 19 · TypeScript (pinned `~6.0`: typescript-eslint doesn't support TS 7 ye
 - Ascendancy: capstone research starts a public 100-day Nexus Attunement (`attunementDone`); first to complete wins. Gated to story stage 6 (day 300). Lab output was tuned down (1 + 0.12/pop) after headless sims showed research hoarding.
 - Balance notes (headless 720-day sims, 10 seeds): bots reach the capstone at ~day 300 and win Ascendancy ~day 400 if unopposed; the map saturates (all habitable planets claimed) by ~day 200, so early claiming decides Dominion. Phase 8 should re-tune against human play.
 
+## Persistence (current)
+
+- One slot, `autosave`, in IndexedDB db `frontier-protocol` / store `saves`. If IndexedDB is unavailable, falls back to memory and the menu warns that progress won't persist.
+- Autosave: routine save at most every 5 s while a match is on screen and the state changed; immediate flush on: new match, event decision, victory, pausing, tab hidden/`pagehide`, Settings → Save now, quit to menu. Writes never overlap (coalesced).
+- Saves are validated on load (types, ranges, references). Invalid/unsupported saves surface as a menu notice with "Discard broken save"; they never crash the app. Saves from a newer version are rejected.
+- **Changing the shape of `GameState` ⇒ bump `SAVE_VERSION` (domain/game.ts) and add `MIGRATIONS[oldVersion]` in `persistence/save.ts`**, plus a test. `validateGameState` must be updated with every new field.
+- Round-trip determinism is tested: load(save(x)) continues identically to x.
+- Tutorial-seen flag lives in localStorage (`fp.tutorialSeen`), a per-device convenience only.
+
 ## Map ↔ state boundary
 
 Renderers read `useGameStore((s) => s.game.galaxy / .systemStates)` and only call `useSelectionStore` `select`/`hover`. `GalaxyScene` is lazy-loaded (keeps three.js out of the main chunk and out of jsdom tests). Unknown systems are anonymous in UI (`displayName`). Shared visual constants live in `render/visuals.ts`; faction colors in `domain/factions.ts` (mirror `--faction-*` tokens).
@@ -72,8 +81,9 @@ Remote `origin` = https://github.com/sppant/frontier-protocol.git, branch `main`
 - [x] Phase 4a exploration: fog of war is **per faction** (`SystemState.exploration: Record<FactionId, ExplorationStatus>`; read via `explorationOf` / `useExploration()`), scout expeditions (`sim/fleets.ts`: Dijkstra `findPath`, `checkExpedition`/`launchExpedition`, `advanceFleets`, `fleetEta`/`fleetPosition`/`fleetRoute`), survey reveals the system + detects neighbours, anomalies pay research. `EventFeed` (player events + active expeditions), fleet markers in 3D and SVG maps.
 - [x] Phase 4b progression: techs (`domain/techs.ts`, bought with the research stockpile; effects multiply faction modifiers via `sim/modifiers.ts#modifiersFor`; capstone `nexusAttunement` gated by story stage 5), story chapters + random events with choices (`domain/events.ts`, `sim/events.ts`; seeded `rngState` lives in `GameState`), victory (`sim/victory.ts`: Ascendancy / Dominion 10 systems / Hegemony score at day 720; applies to every faction). UI: tabbed `SidePanel` (Inspector/Research/Objectives), `Dialogs` (event + victory). Game loop auto-pauses on pending event / victory; Resume is disabled meanwhile.
 - [x] Phase 5 bots: `bots/` (pure utility AI: `personalities.ts` weights + difficulty defs, `candidates.ts` legal-action generation & scoring, `decide.ts` decision round + objective + log) and `engine/step.ts` (`step` = `tick` then bots; `advanceGame` stops at a pending decision/victory; `newGame`/`withBots`). Bots act only via the same commands as the player (colonize/build/research/expedition). `GameState.bots[faction]` holds personality, difficulty, private `rngState`, `nextDecisionTick`, objective, capped decision `log` (label, utility, top-2 factors, 3 alternatives). UI: "Rival activity" feed tab.
+- [x] Phase 7a persistence & start flow: `persistence/` (`validate.ts` runtime validator w/ referential integrity → `SaveError`; `save.ts` envelope `{format, version, savedAt, game}` + `migrate` chain; `storage.ts` `SaveStore` = `IndexedDbStore` | `MemoryStore` fallback; `saveGame.ts` never-throws `loadGame` → none/ok/corrupt; `autosave.ts` throttled non-overlapping `Autosaver`), `store/session.ts` orchestration (`bootSession`, `startNewGame`, `continueGame`, `quitToMenu`, `startAutosave`), `appStore` (screen: boot/menu/setup/game, save summary/status), screens `MainMenu`/`NewGameScreen`/`SettingsDialog`/`Onboarding`.
 - [ ] Phase 4 (rest) gameplay · Phase 5 bots · Phase 6 full UI · Phase 7 persistence/polish · Phase 8 verification.
 
 ## Known limitations / next
 
-No combat/diplomacy; no persistence/onboarding yet; no persistence yet; WebGL canvas itself is verified only via Playwright (jsdom has no WebGL). Vite 8 uses Rolldown, so `manualChunks` object form is unsupported; revisit chunk splitting if bundle size matters.
+No combat/diplomacy; single save slot; no cross-device sync; no persistence yet; WebGL canvas itself is verified only via Playwright (jsdom has no WebGL). Vite 8 uses Rolldown, so `manualChunks` object form is unsupported; revisit chunk splitting if bundle size matters.

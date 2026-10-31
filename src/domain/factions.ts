@@ -88,3 +88,24 @@ export const FACTIONS: Record<FactionId, FactionInfo> = {
 };
 
 export const FACTION_IDS = Object.keys(FACTIONS) as FactionId[];
+
+const PCT = (m: number) => Math.round(Math.abs(m - 1) * 100);
+
+/** Human-readable strengths/weaknesses derived from a faction's modifiers. */
+export function modifierHighlights(m: FactionModifiers): { text: string; good: boolean }[] {
+  const rows: { key: keyof FactionModifiers; label: string; lowerIsBetter?: boolean }[] = [
+    { key: 'credits', label: 'credit income' },
+    { key: 'minerals', label: 'mineral output' },
+    { key: 'research', label: 'research' },
+    { key: 'colonyCost', label: 'colonization cost', lowerIsBetter: true },
+    { key: 'growth', label: 'population growth' },
+    { key: 'upkeep', label: 'upkeep', lowerIsBetter: true },
+    { key: 'fleetSpeed', label: 'fleet speed' },
+  ];
+  return rows.flatMap((r) => {
+    const v = m[r.key];
+    if (PCT(v) === 0) return [];
+    const up = v > 1;
+    return [{ text: `${up ? '+' : '−'}${PCT(v)}% ${r.label}`, good: r.lowerIsBetter ? !up : up }];
+  });
+}

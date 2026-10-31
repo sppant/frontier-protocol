@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { startMatch } from './helpers';
 
 test('3D galaxy renders without errors and systems can be inspected via simple map', async ({
   page,
@@ -7,7 +8,7 @@ test('3D galaxy renders without errors and systems can be inspected via simple m
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 
-  await page.goto('/');
+  await startMatch(page);
   await expect(page.locator('canvas')).toBeVisible();
   await page.waitForTimeout(1500);
   await page.screenshot({ path: process.env.SHOT ?? 'test-results/galaxy.png' });

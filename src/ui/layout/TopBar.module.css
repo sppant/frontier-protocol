@@ -49,3 +49,8 @@
   color: var(--danger);
   font-size: var(--text-xs);
 }
+
+.save {
+  min-width: 7ch;
+  text-align: right;
+}

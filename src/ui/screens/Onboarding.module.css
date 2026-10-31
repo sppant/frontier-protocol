@@ -1,0 +1,27 @@
+.card {
+  position: absolute;
+  top: var(--sp-3);
+  left: var(--sp-3);
+  z-index: 5;
+  width: min(340px, calc(100% - 2 * var(--sp-3)));
+  padding: var(--sp-4);
+  background: rgb(12 16 22 / 0.94);
+  border: 1px solid var(--accent-dim);
+  border-left: 3px solid var(--accent);
+}
+.title {
+  margin: var(--sp-1) 0 var(--sp-2);
+  font-size: var(--text-lg);
+}
+.body {
+  margin: 0 0 var(--sp-3);
+  color: var(--text-1);
+  line-height: 1.5;
+}
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+.spacer {
+  flex: 1;
+}

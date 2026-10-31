@@ -3,7 +3,9 @@ import { FACTIONS } from '@/domain/factions';
 import { RESOURCE_IDS, type ResourceId } from '@/domain/game';
 import { factionReport } from '@/sim/economy';
 import { SPEEDS, useClockStore } from '@/store/clockStore';
+import { useAppStore } from '@/store/appStore';
 import { useGameStore } from '@/store/gameStore';
+import { useViewStore } from '@/store/viewStore';
 import { Button, StatusDot } from '@/ui/primitives';
 import styles from './TopBar.module.css';
 
@@ -53,6 +55,8 @@ export function TopBar() {
   const speed = useClockStore((s) => s.speed);
   const togglePause = useClockStore((s) => s.togglePause);
   const setSpeed = useClockStore((s) => s.setSpeed);
+  const saveStatus = useAppStore((s) => s.saveStatus);
+  const setSettingsOpen = useViewStore((s) => s.setSettingsOpen);
 
   return (
     <header className={styles.bar}>
@@ -90,6 +94,23 @@ export function TopBar() {
             {s}×
           </Button>
         ))}
+        <span
+          className={`label ${styles.save}`}
+          role="status"
+          data-testid="save-status"
+          title="Autosave status"
+        >
+          {saveStatus === 'error'
+            ? '⚠ Save failed'
+            : saveStatus === 'saving'
+              ? 'Saving…'
+              : saveStatus === 'saved'
+                ? '✓ Saved'
+                : ''}
+        </span>
+        <Button onClick={() => setSettingsOpen(true)} aria-label="Settings">
+          ⚙ Settings
+        </Button>
       </div>
     </header>
   );

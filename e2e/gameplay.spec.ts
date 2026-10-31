@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
-import { runUntil } from './helpers';
+import { runUntil, startMatch } from './helpers';
 
 test('simulation advances and building changes the economy', async ({ page }) => {
-  await page.goto('/');
+  await startMatch(page);
   await page.getByRole('button', { name: 'Simple map' }).click();
 
   // Find the player's capital: the known system that offers construction.
@@ -47,7 +47,7 @@ test('simulation advances and building changes the economy', async ({ page }) =>
 });
 
 test('expedition reveals a new system and shows in the feed', async ({ page }) => {
-  await page.goto('/');
+  await startMatch(page);
   await page.getByRole('button', { name: 'Speed 4x' }).click();
 
   // Pick a detected system on the 3D-independent simple map.
@@ -82,7 +82,7 @@ test('expedition reveals a new system and shows in the feed', async ({ page }) =
 });
 
 test('research tab: techs are gated by research points and apply on purchase', async ({ page }) => {
-  await page.goto('/');
+  await startMatch(page);
   await page.getByRole('tab', { name: 'Research' }).click();
   const deepCore = page
     .locator('li')
@@ -96,7 +96,7 @@ test('research tab: techs are gated by research points and apply on purchase', a
 });
 
 test('rival bots act on their own and explain their decisions', async ({ page }) => {
-  await page.goto('/');
+  await startMatch(page);
   await page.getByRole('button', { name: 'Speed 4x' }).click();
   await page.getByRole('tab', { name: 'Rival activity' }).click();
   const list = page.getByRole('list', { name: 'Rival activity' });
