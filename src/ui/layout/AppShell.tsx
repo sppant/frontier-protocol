@@ -1,3 +1,5 @@
+import { GalaxyMap } from '@/render/GalaxyMap';
+import { SystemInspector } from '@/ui/panels/SystemInspector';
 import { Panel } from '@/ui/primitives';
 import { TopBar } from './TopBar';
 import styles from './AppShell.module.css';
@@ -8,12 +10,10 @@ export function AppShell() {
       <TopBar />
       <main className={styles.main}>
         <section className={styles.map} aria-label="Galaxy map">
-          <p className="label">Galaxy map — not yet available</p>
+          <GalaxyMap />
         </section>
         <aside className={styles.side}>
-          <Panel title="Inspector">
-            <p>Select a star system to inspect it. Galaxy map arrives in the next milestone.</p>
-          </Panel>
+          <SystemInspector />
         </aside>
         <div className={styles.feed}>
           <Panel title="Event feed">

@@ -1,0 +1,10 @@
+.label {
+  color: var(--text-1);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  text-shadow: 0 0 4px var(--bg-0);
+}
+.labelHover {
+  composes: label;
+  color: var(--accent);
+}

@@ -21,6 +21,10 @@ React 19 · TypeScript (pinned `~6.0`: typescript-eslint doesn't support TS 7 ye
 - `e2e/` — Playwright specs. Unit tests live beside code as `*.test.ts(x)`.
 - Import alias `@/` → `src/`.
 
+## Map ↔ state boundary
+
+Renderers read `galaxyStore` (`galaxy` static layout, `systemStates` dynamic) and only call `select`/`hover`. `GalaxyScene` is lazy-loaded (keeps three.js out of the main chunk and out of jsdom tests). Unknown systems are anonymous in UI (`displayName`). Shared visual constants live in `render/visuals.ts`; faction colors in `domain/factions.ts` (mirror `--faction-*` tokens).
+
 ## Conventions
 
 - Strict TS, no `any`. Pure functions for rules. Stable string IDs for entities.
@@ -41,8 +45,9 @@ Remote `origin` = https://github.com/sppant/frontier-protocol.git, branch `main`
 ## Status
 
 - [x] Phase 1 foundation: tooling, tokens, primitives, app shell with working pause/speed controls (placeholder map/panels are clearly labeled).
-- [ ] Phase 2 galaxy visualization · Phase 3 simulation · Phase 4 gameplay · Phase 5 bots · Phase 6 full UI · Phase 7 persistence/polish · Phase 8 verification.
+- [x] Phase 2 galaxy visualization: seeded RNG + deterministic `generateGalaxy` (16 systems, hyperlanes, 4 capitals), `galaxyStore` (galaxy, per-system `SystemState`, selection/hover), R3F scene (instanced stars, lanes, territory rings, selection ring, starfield, nebulae, OrbitControls), 2D SVG `SimpleMap` fallback (no WebGL / player toggle), `SystemInspector`. Ownership/exploration is initial state only; sim will mutate it.
+- [ ] Phase 3 simulation · Phase 4 gameplay · Phase 5 bots · Phase 6 full UI · Phase 7 persistence/polish · Phase 8 verification.
 
 ## Known limitations / next
 
-Galaxy map, simulation and bots not yet built. Vite 8 uses Rolldown, so `manualChunks` object form is unsupported; revisit chunk splitting if bundle size matters.
+Simulation, gameplay actions and bots not yet built; WebGL canvas itself is verified only via Playwright (jsdom has no WebGL). Vite 8 uses Rolldown, so `manualChunks` object form is unsupported; revisit chunk splitting if bundle size matters.

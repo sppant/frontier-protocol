@@ -1,8 +1,11 @@
 import { Button, StatusDot } from '@/ui/primitives';
+import { FACTIONS } from '@/domain/factions';
+import { useGalaxyStore } from '@/store/galaxyStore';
 import { SPEEDS, useClockStore } from '@/store/clockStore';
 import styles from './TopBar.module.css';
 
 export function TopBar() {
+  const faction = FACTIONS[useGalaxyStore((s) => s.playerFaction)];
   const paused = useClockStore((s) => s.paused);
   const speed = useClockStore((s) => s.speed);
   const togglePause = useClockStore((s) => s.togglePause);
@@ -12,7 +15,9 @@ export function TopBar() {
     <header className={styles.bar}>
       <div className={styles.brand}>
         <span className={styles.title}>FRONTIER PROTOCOL</span>
-        <span className="label">2479 · Nexus Survey</span>
+        <span className="label">
+          2479 · <span style={{ color: faction.color }}>{faction.name}</span>
+        </span>
       </div>
       <div className={styles.clock} role="group" aria-label="Simulation controls">
         <StatusDot status={paused ? 'warn' : 'ok'} label={paused ? 'Paused' : 'Running'} />

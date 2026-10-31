@@ -17,9 +17,9 @@
 }
 .map {
   grid-area: map;
-  display: grid;
-  place-items: center;
-  background: radial-gradient(ellipse at center, var(--bg-2), var(--bg-0));
+  position: relative;
+  min-height: 0;
+  background: var(--bg-0);
 }
 .side {
   grid-area: side;
