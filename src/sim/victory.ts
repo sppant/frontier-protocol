@@ -5,7 +5,7 @@ import type { FactionId } from '@/domain/types';
 import { factionColonies } from './economy';
 
 /** Systems needed to win by Dominion (out of 16). */
-export const DOMINION_SYSTEMS = 8;
+export const DOMINION_SYSTEMS = 10;
 /** Days a faction needs to complete Nexus Attunement once it has researched it. */
 export const ATTUNEMENT_DAYS = 100;
 /** Day on which the match is decided by score if nobody has won. */

@@ -28,3 +28,18 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
 };
 
 export const BUILDING_IDS = Object.keys(BUILDINGS) as BuildingId[];
+
+/** Highest building level (built = 1, two upgrades possible). */
+export const MAX_BUILDING_LEVEL = 3;
+/** Output multiplier bonus per level above 1. */
+export const LEVEL_OUTPUT_BONUS = 0.5;
+/** Upkeep grows with level by the same fraction. */
+export const LEVEL_UPKEEP_BONUS = 0.5;
+/** Upgrade cost = base cost × this × current level. */
+export const UPGRADE_COST_FACTOR = 1.5;
+
+/** Terraforming: each step adds this much habitability, up to the cap. */
+export const TERRAFORM_STEP = 10;
+export const MAX_TERRAFORM = 30;
+export const TERRAFORM_COST = { credits: 150, minerals: 100, research: 0 };
+export const TERRAFORM_TICKS = 15;

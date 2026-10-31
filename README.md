@@ -28,7 +28,7 @@ The game starts **paused**. Press **▶ Resume** and use **1× / 2× / 4×** to 
 | Produce  | **Mining Complexes** are your only source of minerals; **Research Labs** make research; **Trade Hubs** make credits. Watch upkeep: colonies and buildings cost credits every day. |
 | Research | Spend research on technologies in the **Research** tab. Each faction has a unique tech.                                                                                           |
 | Decide   | Story and random events pause time and ask you to choose. Choices cost or reward resources.                                                                                       |
-| Watch    | **Objectives** shows your progress, a score-over-time chart and live standings. **Rival activity** (event feed) explains what each bot did and why.                               |
+| Watch    | **Objectives** shows suggested next steps, your progress, a score-over-time chart and live standings. **Rival activity** (event feed) explains what each bot did and why.         |
 
 ### Factions
 
@@ -44,7 +44,7 @@ The game starts **paused**. Press **▶ Resume** and use **1× / 2× / 4×** to 
 Any faction, including the bots, can win in three ways:
 
 1. **Nexus Ascendancy:** research the chain to _Nexus Attunement_ (unlocks at the Convergence, day 300), then hold on through a public 100-day attunement. Everyone can see who is attuning.
-2. **Dominion:** control 8 of the 16 systems.
+2. **Dominion:** control 10 of the 16 systems.
 3. **Hegemony:** if nobody has won by day 720, the highest score wins.
 
 ### Difficulty

@@ -18,6 +18,7 @@ export type Migrations = Record<number, (envelope: SaveEnvelope) => SaveEnvelope
 /**
  * Registered migrations (key = version upgraded *from*).
  * v1 → v2: standings history was added to GameState.
+ * v2 → v3: colonies gained `upgrades` and `terraform`; queue items gained a `kind`.
  */
 export const MIGRATIONS: Migrations = {
   1: (env) => {
@@ -26,6 +27,30 @@ export const MIGRATIONS: Migrations = {
         ? { ...(env.game as Record<string, unknown>), version: 2, history: [] }
         : env.game; // not an object: leave it for validation to reject
     return { ...env, version: 2, game };
+  },
+  2: (env) => {
+    const g = env.game as Record<string, unknown> | null;
+    if (typeof g !== 'object' || g === null) return { ...env, version: 3 };
+    const colonies = g.colonies;
+    const upgraded =
+      typeof colonies === 'object' && colonies !== null
+        ? Object.fromEntries(
+            Object.entries(colonies as Record<string, Record<string, unknown>>).map(([id, c]) => [
+              id,
+              typeof c === 'object' && c !== null
+                ? {
+                    ...c,
+                    upgrades: {},
+                    terraform: 0,
+                    queue: Array.isArray(c.queue)
+                      ? c.queue.map((q: Record<string, unknown>) => ({ kind: 'build', ...q }))
+                      : c.queue,
+                  }
+                : c,
+            ]),
+          )
+        : colonies;
+    return { ...env, version: 3, game: { ...g, version: 3, colonies: upgraded } };
   },
 };
 

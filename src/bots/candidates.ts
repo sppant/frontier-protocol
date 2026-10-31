@@ -3,8 +3,8 @@ import type { BotAction, Objective } from '@/domain/bots';
 import type { GameState, Resources } from '@/domain/game';
 import { TECHS } from '@/domain/techs';
 import { explorationOf, type FactionId } from '@/domain/types';
-import { checkBuild, checkColonize } from '@/sim/commands';
-import { colonyCapacity, factionReport, planetOf } from '@/sim/economy';
+import { checkBuild, checkColonize, checkTerraform, checkUpgrade } from '@/sim/commands';
+import { buildingLevel, colonyCapacity, factionReport, planetOf } from '@/sim/economy';
 import { checkExpedition } from '@/sim/fleets';
 import { checkResearch } from '@/sim/research';
 import type { Weights } from './personalities';
@@ -173,6 +173,51 @@ function builds(
   return out;
 }
 
+/** Upgrades and terraforming: late-game sinks, valued below first-time construction. */
+function improvements(state: GameState, ctx: Context, netCredits: number): Candidate[] {
+  const { factionId: f, weights: w } = ctx;
+  const res = state.factions[f].resources;
+  const out: Candidate[] = [];
+  for (const colony of Object.values(state.colonies)) {
+    if (colony.ownerId !== f) continue;
+    const planet = planetOf(state, colony.planetId);
+    if (!planet) continue;
+    const pop = Math.floor(colony.population);
+    for (const b of colony.buildings) {
+      const check = checkUpgrade(state, f, colony.id, b);
+      if (!check.ok) continue;
+      if (res.credits - check.cost.credits < ctx.reserve) continue;
+      if (b !== 'tradeHub' && netCredits < 1) continue; // upgrades raise upkeep
+      const base = {
+        mine: w.economy * w.minerals * (0.2 + 0.1 * planet.minerals),
+        lab: w.research * (0.2 + 0.03 * pop),
+        tradeHub: w.economy * (0.2 + 0.04 * pop),
+      }[b];
+      out.push(
+        make(
+          `upg:${colony.id}:${b}`,
+          { kind: 'upgrade', colonyId: colony.id, building: b },
+          `Upgrade ${BUILDINGS[b].name} on ${planet.name}`,
+          { output: (base * 0.9) / buildingLevel(colony, b) },
+        ),
+      );
+    }
+    const terra = checkTerraform(state, f, colony.id);
+    if (terra.ok && res.credits - terra.cost.credits >= ctx.reserve && netCredits >= 1) {
+      const full = pop >= colonyCapacity(planet, colony.terraform) * 0.8;
+      out.push(
+        make(
+          `terra:${colony.id}`,
+          { kind: 'terraform', colonyId: colony.id },
+          `Terraform ${planet.name}`,
+          { capacity: w.expand * (full ? 0.45 : 0.2) },
+        ),
+      );
+    }
+  }
+  return out;
+}
+
 function techUtility(ctx: Context, techId: string): Record<string, number> {
   const tech = TECHS.find((t) => t.id === techId);
   if (!tech) return {};
@@ -190,21 +235,37 @@ function techUtility(ctx: Context, techId: string): Record<string, number> {
   const efficiency = 80 / (tech.cost + 40);
   const out: Record<string, number> = {};
   for (const [k, v] of Object.entries(raw)) if (v > 0) out[k] = v * efficiency;
+  if (tech.minHabitability) out.outposts = 0.35 * w.expand;
+  if (tech.unlocksTerraform) out.terraforming = 0.3 * w.expand;
   if (tech.capstone) out.capstone = ctx.objective === 'ascendancy' ? 3 : 1.5;
   else if (ctx.objective === 'ascendancy' && ctx.capstoneChain.has(tech.id)) out.objective = 0.25;
   return out;
 }
 
 function researches(state: GameState, ctx: Context): Candidate[] {
+  const owned = state.factions[ctx.factionId].techs;
+  const direct = new Map(TECHS.map((t) => [t.id, sum(techUtility(ctx, t.id))] as const));
   const out: Candidate[] = [];
   for (const tech of TECHS) {
     if (!checkResearch(state, ctx.factionId, tech.id).ok) continue;
+    const breakdown = techUtility(ctx, tech.id);
+    // Planning bots (those with an objective) also credit what a tech unlocks.
+    if (ctx.objective !== null) {
+      const unlocked = TECHS.filter(
+        (d) =>
+          d.requires.includes(tech.id) &&
+          !owned.includes(d.id) &&
+          (!d.faction || d.faction === ctx.factionId),
+      ).map((d) => direct.get(d.id) ?? 0);
+      const enables = unlocked.length > 0 ? 0.6 * Math.max(...unlocked) : 0;
+      if (enables > 0) breakdown.enables = enables;
+    }
     out.push(
       make(
         `tech:${tech.id}`,
         { kind: 'research', techId: tech.id },
         `Research ${tech.name}`,
-        techUtility(ctx, tech.id),
+        breakdown,
       ),
     );
   }
@@ -224,6 +285,7 @@ export function generateCandidates(state: GameState, ctx: Context): Candidate[] 
     ...colonizations_,
     ...expeditions(state, ctx, knownTargets.size),
     ...builds(state, ctx, netCredits, net.minerals),
+    ...improvements(state, ctx, netCredits),
     ...researches(state, ctx),
   ];
 }

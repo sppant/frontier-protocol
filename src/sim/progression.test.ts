@@ -63,7 +63,7 @@ describe('technology', () => {
       ok: false,
       reason: 'Needs 40 research.',
     });
-    const rich = withResearch(g, 'terran', 20000);
+    const rich = withResearch(g, 'terran', 50000);
     expect(checkResearch(rich, 'terran', 'fusionGrid')).toEqual({
       ok: false,
       reason: 'Requires Deep Core Extraction.',
@@ -225,7 +225,7 @@ describe('victory', () => {
   });
 
   it('Ascendancy: the capstone starts a public 100-day attunement, then wins', () => {
-    let s = { ...withResearch(game(), 'helion', 20000), storyStage: 6 };
+    let s = { ...withResearch(game(), 'helion', 50000), storyStage: 6 };
     for (const id of [
       'deepCore',
       'fusionGrid',

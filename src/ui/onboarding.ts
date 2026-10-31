@@ -32,7 +32,7 @@ export const TUTORIAL_STEPS: { title: string; body: string }[] = [
   },
   {
     title: 'Expand before your rivals',
-    body: 'Select an explored system and colonize habitable planets in or next to your territory. Three rival factions are doing the same, and most good planets are gone by around day 200. Controlling 8 of the 16 systems wins by Dominion.',
+    body: 'Select an explored system and colonize habitable planets in or next to your territory. Three rival factions are doing the same, and most good planets are gone by around day 200. Controlling 10 of the 16 systems wins by Dominion.',
   },
   {
     title: 'Research, events and victory',

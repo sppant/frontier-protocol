@@ -69,7 +69,7 @@ export function resolveEvent(state: GameState, choiceId: string): CommandResult 
     for (const c of Object.values(colonies)) {
       if (c.ownerId !== player) continue;
       const planet = planetOf(state, c.planetId);
-      const cap = planet ? colonyCapacity(planet) : c.population;
+      const cap = planet ? colonyCapacity(planet, c.terraform) : c.population;
       colonies[c.id] = { ...c, population: Math.min(cap, c.population + effects.population) };
     }
   }

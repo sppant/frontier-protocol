@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { FACTIONS, FACTION_IDS } from '@/domain/factions';
 import { CHAPTERS } from '@/domain/events';
+import { nextSteps } from '@/sim/advice';
 import { score, systemsOwned, victoryProgress } from '@/sim/victory';
 import { useGameStore } from '@/store/gameStore';
 import { Panel } from '@/ui/primitives';
@@ -32,6 +33,7 @@ export function ObjectivesPanel() {
     const done = game.factions[f].attunementDone;
     return done === null ? [] : [{ f, done }];
   });
+  const steps = nextSteps(game, player);
   const standings = [...FACTION_IDS].sort((a, b) => score(game, b) - score(game, a));
 
   return (
@@ -40,6 +42,15 @@ export function ObjectivesPanel() {
         Chapter {Math.max(game.storyStage, 1)} of {CHAPTERS.length}
       </p>
       <h3 className={styles.chapter}>{chapter}</h3>
+
+      <h4 className="label">Suggested next steps</h4>
+      <ul className={styles.steps} aria-label="Suggested next steps">
+        {steps.length > 0 ? (
+          steps.map((t) => <li key={t}>{t}</li>)
+        ) : (
+          <li>Nothing urgent. Resume time and watch the feed for events.</li>
+        )}
+      </ul>
 
       <h4 className="label">Paths to victory</h4>
       <ul className={styles.paths}>

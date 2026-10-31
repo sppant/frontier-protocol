@@ -129,30 +129,72 @@ describe('save envelope and migrations', () => {
   });
 });
 
-describe('real migration: v1 → v2 (standings history)', () => {
-  /** A save exactly as v1 of the game wrote it: no `history`, game.version 1. */
+describe('real migrations', () => {
+  /** A save exactly as v1 of the game wrote it: no `history`, plain colonies/queue items. */
   const v1Save = () => {
     const { history: _history, ...rest } = clone(midGame());
     void _history;
+    const colonies = Object.fromEntries(
+      Object.entries(rest.colonies).map(([id, c]) => {
+        const { upgrades: _u, terraform: _t, ...old } = c;
+        void _u;
+        void _t;
+        return [
+          id,
+          {
+            ...old,
+            queue: old.queue.map((q) => ({
+              building: (q as { building: string }).building,
+              remaining: q.remaining,
+            })),
+          },
+        ];
+      }),
+    );
     return {
       format: SAVE_FORMAT,
       version: 1,
       savedAt: new Date().toISOString(),
-      game: { ...rest, version: 1 },
+      game: { ...rest, colonies, version: 1 },
     };
   };
 
-  it('upgrades a v1 save and keeps everything else intact', () => {
+  /** A v2 save: has history, but colonies lack upgrades/terraform and queue items lack a kind. */
+  const v2Save = () => {
+    const v1 = v1Save();
+    return {
+      ...v1,
+      version: 2,
+      game: { ...v1.game, version: 2, history: clone(midGame().history) },
+    };
+  };
+
+  it('upgrades a v1 save through every step and keeps everything else intact', () => {
     const old = v1Save();
     const loaded = decodeSave(old);
-    expect(loaded.game.version).toBe(2);
+    expect(loaded.game.version).toBe(CURRENT_SAVE_VERSION);
     expect(loaded.game.history).toEqual([]);
-    const { history: _h, version: _v, ...upgraded } = loaded.game;
-    const { version: _ov, ...original } = old.game as Record<string, unknown>;
-    void _h;
-    void _v;
-    void _ov;
-    expect(upgraded).toEqual(original);
+    for (const c of Object.values(loaded.game.colonies)) {
+      expect(c.upgrades).toEqual({});
+      expect(c.terraform).toBe(0);
+    }
+    expect(loaded.game.galaxy).toEqual((old.game as { galaxy: unknown }).galaxy);
+    expect(loaded.game.factions).toEqual((old.game as { factions: unknown }).factions);
+    expect(loaded.game.tick).toBe((old.game as { tick: number }).tick);
+  });
+
+  it('v2 → v3 tags old construction items as builds and adds colony fields', () => {
+    // Make sure there is a queued item to convert.
+    const old = v2Save();
+    const colonies = old.game.colonies as Record<string, { queue: unknown[] }>;
+    const first = Object.values(colonies)[0]!;
+    first.queue = [{ building: 'lab', remaining: 5 }];
+    const { game } = decodeSave(old);
+    const c = Object.values(game.colonies)[0]!;
+    expect(c.queue).toEqual([{ kind: 'build', building: 'lab', remaining: 5 }]);
+    expect(c.upgrades).toEqual({});
+    expect(c.terraform).toBe(0);
+    expect(game.history.length).toBe(old.game.history.length); // history preserved
   });
 
   it('an upgraded save keeps playing and starts recording history', () => {
@@ -166,11 +208,11 @@ describe('real migration: v1 → v2 (standings history)', () => {
     expect(() => validateGameState(clone(s))).not.toThrow();
   });
 
-  it('still rejects a v1 save that is damaged, without throwing a non-SaveError', () => {
-    const bad = { ...v1Save(), game: 'garbage' };
-    expect(() => decodeSave(bad)).toThrow(SaveError);
-    const worse = { ...v1Save(), game: { nope: 1 } };
-    expect(() => decodeSave(worse)).toThrow(SaveError);
+  it('still rejects damaged old saves with a SaveError, never another exception', () => {
+    for (const make of [v1Save, v2Save]) {
+      expect(() => decodeSave({ ...make(), game: 'garbage' })).toThrow(SaveError);
+      expect(() => decodeSave({ ...make(), game: { nope: 1 } })).toThrow(SaveError);
+    }
   });
 });
 

@@ -3,7 +3,13 @@ import { FACTION_IDS } from '@/domain/factions';
 import type { GameState } from '@/domain/game';
 import { TECHS } from '@/domain/techs';
 import type { FactionId } from '@/domain/types';
-import { colonize, startConstruction, type CommandResult } from '@/sim/commands';
+import {
+  colonize,
+  startConstruction,
+  startTerraform,
+  startUpgrade,
+  type CommandResult,
+} from '@/sim/commands';
 import { launchExpedition } from '@/sim/fleets';
 import { researchTech } from '@/sim/research';
 import { createRng } from '@/sim/rng';
@@ -21,6 +27,10 @@ function execute(state: GameState, f: FactionId, a: BotAction): CommandResult {
       return launchExpedition(state, f, a.targetId);
     case 'build':
       return startConstruction(state, f, a.colonyId, a.building);
+    case 'upgrade':
+      return startUpgrade(state, f, a.colonyId, a.building);
+    case 'terraform':
+      return startTerraform(state, f, a.colonyId);
     case 'research':
       return researchTech(state, f, a.techId);
   }

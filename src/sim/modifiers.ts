@@ -23,3 +23,16 @@ export function surveyReachFor(state: GameState, factionId: FactionId): number {
     1,
   );
 }
+
+/** Lowest planet habitability this faction can colonize. */
+export const BASE_MIN_HABITABILITY = 20;
+export function minHabitabilityFor(state: GameState, factionId: FactionId): number {
+  return state.factions[factionId].techs.reduce(
+    (min, id) => Math.min(min, TECH_BY_ID[id]?.minHabitability ?? min),
+    BASE_MIN_HABITABILITY,
+  );
+}
+
+export function canTerraform(state: GameState, factionId: FactionId): boolean {
+  return state.factions[factionId].techs.some((id) => TECH_BY_ID[id]?.unlocksTerraform);
+}

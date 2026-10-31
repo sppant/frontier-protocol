@@ -1,7 +1,13 @@
 import { create } from 'zustand';
 import type { BuildingId, GameState } from '@/domain/game';
 import type { FactionId } from '@/domain/types';
-import { colonize, startConstruction, type CommandResult } from '@/sim/commands';
+import {
+  colonize,
+  startConstruction,
+  startTerraform,
+  startUpgrade,
+  type CommandResult,
+} from '@/sim/commands';
 import { resolveEvent } from '@/sim/events';
 import { launchExpedition } from '@/sim/fleets';
 import { researchTech } from '@/sim/research';
@@ -16,6 +22,8 @@ interface GameStore {
   /** Player commands; return the outcome so the UI can explain failures. */
   colonize: (planetId: string) => CommandResult;
   build: (colonyId: string, building: BuildingId) => CommandResult;
+  upgrade: (colonyId: string, building: BuildingId) => CommandResult;
+  terraform: (colonyId: string) => CommandResult;
   expedition: (targetId: string) => CommandResult;
   research: (techId: string) => CommandResult;
   resolveEvent: (choiceId: string) => CommandResult;
@@ -36,6 +44,9 @@ export const useGameStore = create<GameStore>((set, get) => {
     colonize: (planetId) => run((g) => colonize(g, g.playerFaction, planetId)),
     build: (colonyId, building) =>
       run((g) => startConstruction(g, g.playerFaction, colonyId, building)),
+    upgrade: (colonyId, building) =>
+      run((g) => startUpgrade(g, g.playerFaction, colonyId, building)),
+    terraform: (colonyId) => run((g) => startTerraform(g, g.playerFaction, colonyId)),
     expedition: (targetId) => run((g) => launchExpedition(g, g.playerFaction, targetId)),
     research: (techId) => run((g) => researchTech(g, g.playerFaction, techId)),
     resolveEvent: (choiceId) => run((g) => resolveEvent(g, choiceId)),

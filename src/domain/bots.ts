@@ -9,6 +9,8 @@ export type BotAction =
   | { kind: 'expedition'; targetId: string }
   | { kind: 'colonize'; planetId: string }
   | { kind: 'build'; colonyId: string; building: BuildingId }
+  | { kind: 'upgrade'; colonyId: string; building: BuildingId }
+  | { kind: 'terraform'; colonyId: string }
   | { kind: 'research'; techId: TechId };
 
 /** One executed decision, with enough context to explain it. */

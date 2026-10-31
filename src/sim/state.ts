@@ -43,6 +43,8 @@ export function createGame(seed: number, playerFaction: FactionId): GameState {
       ownerId: system.homeOf,
       population: Math.min(CAPITAL_POPULATION, colonyCapacity(planet)),
       buildings: [],
+      upgrades: {},
+      terraform: 0,
       queue: [],
     };
   }

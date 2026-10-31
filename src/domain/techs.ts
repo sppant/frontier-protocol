@@ -21,6 +21,10 @@ export interface TechDef {
   surveyReach?: number;
   /** Researching this starts Nexus Attunement; completing it wins (Ascendancy). */
   capstone?: boolean;
+  /** Lowers the minimum habitability needed to found a colony. */
+  minHabitability?: number;
+  /** Allows terraforming colonies. */
+  unlocksTerraform?: boolean;
 }
 
 export const TECHS: TechDef[] = [
@@ -65,6 +69,24 @@ export const TECHS: TechDef[] = [
     mult: { fleetSpeed: 1.5 },
   },
   {
+    id: 'hostileHabitats',
+    name: 'Hostile-Environment Habitats',
+    description:
+      'Settle poor planets (habitability 5+) as outposts. Ideal for mining worlds; their population stays tiny until terraformed.',
+    cost: 300,
+    requires: ['bioHabitats', 'deepCore'],
+    minHabitability: 5,
+  },
+  {
+    id: 'terraforming',
+    name: 'Terraforming',
+    description:
+      'Raise a colony’s habitability by 10 per step (up to +30), which raises its population cap.',
+    cost: 350,
+    requires: ['hostileHabitats', 'fusionGrid'],
+    unlocksTerraform: true,
+  },
+  {
     id: 'fusionGrid',
     name: 'Fusion Grid',
     description: 'Upkeep costs 20% less.',
@@ -93,7 +115,7 @@ export const TECHS: TechDef[] = [
     name: 'Nexus Attunement',
     description:
       'Begin attuning to the Nexus. Ascendancy victory arrives 100 days later, visible to all factions.',
-    cost: 10000,
+    cost: 32000,
     requires: ['nexusCartography', 'quantumLabs', 'fusionGrid'],
     requiresStory: 6,
     capstone: true,

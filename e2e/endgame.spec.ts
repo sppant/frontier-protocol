@@ -2,27 +2,7 @@ import { expect, test } from '@playwright/test';
 import { newGame } from '../src/engine/step';
 import { encodeSave } from '../src/persistence/save';
 import { TIME_LIMIT } from '../src/sim/victory';
-import { runUntil } from './helpers';
-
-/** Seed IndexedDB with a prepared save, bypassing the menu. */
-async function installSave(page: import('@playwright/test').Page, envelope: unknown) {
-  await page.goto('/');
-  await page.evaluate(
-    (env) =>
-      new Promise<void>((resolve, reject) => {
-        const open = indexedDB.open('frontier-protocol', 1);
-        open.onupgradeneeded = () => open.result.createObjectStore('saves');
-        open.onsuccess = () => {
-          const tx = open.result.transaction('saves', 'readwrite');
-          tx.objectStore('saves').put(env, 'autosave');
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => reject(tx.error);
-        };
-      }),
-    envelope,
-  );
-  await page.reload();
-}
+import { installSave, runUntil } from './helpers';
 
 test('the match ends at the time limit and offers a rematch or the menu', async ({ page }) => {
   // One day before Hegemony is decided; story finished so no events interrupt.

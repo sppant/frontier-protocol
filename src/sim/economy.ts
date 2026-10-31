@@ -1,10 +1,10 @@
 import { BUILDINGS } from '@/domain/buildings';
 import type { FactionModifiers } from '@/domain/factions';
-import type { Colony, GameState, Resources } from '@/domain/game';
+import { LEVEL_OUTPUT_BONUS, LEVEL_UPKEEP_BONUS } from '@/domain/buildings';
+import type { BuildingId, Colony, GameState, Resources } from '@/domain/game';
 import type { FactionId, Planet } from '@/domain/types';
 import { modifiersFor } from './modifiers';
 
-export const MIN_COLONY_HABITABILITY = 20;
 const BASE_TAX_PER_POP = 0.5;
 const COLONY_BASE_UPKEEP = 1;
 const GROWTH_RATE = 0.05;
@@ -13,9 +13,22 @@ export function emptyResources(): Resources {
   return { credits: 0, minerals: 0, research: 0 };
 }
 
+/** Habitability including terraforming (capped at 100). */
+export function effectiveHabitability(planet: Planet, terraform = 0): number {
+  return Math.min(100, planet.habitability + terraform);
+}
+
 /** Maximum population a planet supports. */
-export function colonyCapacity(planet: Planet): number {
-  return Math.max(1, Math.round((planet.habitability / 100) * planet.size * 10));
+export function colonyCapacity(planet: Planet, terraform = 0): number {
+  return Math.max(
+    1,
+    Math.round((effectiveHabitability(planet, terraform) / 100) * planet.size * 10),
+  );
+}
+
+/** Level of a built building (1 = as built). */
+export function buildingLevel(colony: Colony, building: BuildingId): number {
+  return 1 + (colony.upgrades[building] ?? 0);
 }
 
 export interface ColonyReport {
@@ -32,11 +45,16 @@ export function colonyReport(colony: Colony, planet: Planet, mods: FactionModifi
   const raw = emptyResources();
   raw.credits += pop * BASE_TAX_PER_POP;
   for (const b of colony.buildings) {
-    if (b === 'mine') raw.minerals += 2 + planet.minerals;
-    else if (b === 'lab') raw.research += 1 + pop * 0.12;
-    else if (b === 'tradeHub') raw.credits += 2 + pop * 0.4;
+    const boost = 1 + LEVEL_OUTPUT_BONUS * (buildingLevel(colony, b) - 1);
+    if (b === 'mine') raw.minerals += (2 + planet.minerals) * boost;
+    else if (b === 'lab') raw.research += (1 + pop * 0.12) * boost;
+    else if (b === 'tradeHub') raw.credits += (2 + pop * 0.4) * boost;
   }
-  const buildingUpkeep = colony.buildings.reduce((sum, b) => sum + BUILDINGS[b].upkeep, 0);
+  const buildingUpkeep = colony.buildings.reduce(
+    (sum, b) =>
+      sum + BUILDINGS[b].upkeep * (1 + LEVEL_UPKEEP_BONUS * (buildingLevel(colony, b) - 1)),
+    0,
+  );
   return {
     colonyId: colony.id,
     production: {
@@ -84,7 +102,7 @@ export function factionReport(state: GameState, factionId: FactionId): FactionRe
 
 /** Logistic population growth toward capacity. */
 export function growPopulation(colony: Colony, planet: Planet, growthMod: number): number {
-  const cap = colonyCapacity(planet);
+  const cap = colonyCapacity(planet, colony.terraform);
   if (colony.population >= cap) return cap;
   const next =
     colony.population + GROWTH_RATE * growthMod * colony.population * (1 - colony.population / cap);

@@ -1,4 +1,4 @@
-import { BUILDINGS } from '@/domain/buildings';
+import { BUILDINGS, MAX_TERRAFORM, TERRAFORM_STEP } from '@/domain/buildings';
 import { FACTION_IDS } from '@/domain/factions';
 import type { Colony, FactionState, GameState } from '@/domain/game';
 import type { FactionId } from '@/domain/types';
@@ -35,7 +35,7 @@ export function tick(state: GameState): GameState {
 
   const growth = Object.fromEntries(FACTION_IDS.map((id) => [id, modifiersFor(state, id).growth]));
   const colonies: Record<string, Colony> = {};
-  const completed: { colony: Colony; building: keyof typeof BUILDINGS }[] = [];
+  const completed: { colony: Colony; message: (planetName: string) => string }[] = [];
   for (const colony of Object.values(state.colonies)) {
     const planet = planetOf(state, colony.planetId);
     let next = colony;
@@ -43,8 +43,30 @@ export function tick(state: GameState): GameState {
       const [head, ...rest] = colony.queue;
       const remaining = (head?.remaining ?? 0) - 1;
       if (head && remaining <= 0) {
-        next = { ...next, buildings: [...next.buildings, head.building], queue: rest };
-        completed.push({ colony: next, building: head.building });
+        if (head.kind === 'build') {
+          next = { ...next, buildings: [...next.buildings, head.building], queue: rest };
+          const name = BUILDINGS[head.building].name;
+          completed.push({ colony: next, message: (p) => `${name} completed on ${p}.` });
+        } else if (head.kind === 'upgrade') {
+          const upgrades = {
+            ...next.upgrades,
+            [head.building]: (next.upgrades[head.building] ?? 0) + 1,
+          };
+          next = { ...next, upgrades, queue: rest };
+          const name = BUILDINGS[head.building].name;
+          const level = 1 + (upgrades[head.building] ?? 0);
+          completed.push({
+            colony: next,
+            message: (p) => `${name} upgraded to level ${level} on ${p}.`,
+          });
+        } else {
+          next = {
+            ...next,
+            terraform: Math.min(MAX_TERRAFORM, next.terraform + TERRAFORM_STEP),
+            queue: rest,
+          };
+          completed.push({ colony: next, message: (p) => `Terraforming of ${p} advanced.` });
+        }
       } else if (head) {
         next = { ...next, queue: [{ ...head, remaining }, ...rest] };
       }
@@ -57,13 +79,13 @@ export function tick(state: GameState): GameState {
   }
 
   let next: GameState = advanceFleets({ ...state, factions, colonies, tick: state.tick + 1 });
-  for (const { colony, building } of completed) {
+  for (const { colony, message } of completed) {
     const planet = planetOf(next, colony.planetId);
     next = withEvent(
       next,
       'construction',
       colony.ownerId,
-      `${BUILDINGS[building].name} completed on ${planet?.name ?? colony.planetId}.`,
+      message(planet?.name ?? colony.planetId),
     );
   }
   for (const id of FACTION_IDS) {

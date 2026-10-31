@@ -1,5 +1,5 @@
 import { EVENTS_BY_ID } from '@/domain/events';
-import { BUILDINGS } from '@/domain/buildings';
+import { BUILDINGS, MAX_BUILDING_LEVEL, MAX_TERRAFORM } from '@/domain/buildings';
 import { FACTION_IDS } from '@/domain/factions';
 import { SAVE_VERSION, type GameState } from '@/domain/game';
 import { TECH_BY_ID } from '@/domain/techs';
@@ -158,9 +158,29 @@ export function validateGameState(value: unknown): GameState {
     arr(c.buildings, `${p}.buildings`).forEach((b, j) =>
       oneOf(b, Object.keys(BUILDINGS), `${p}.buildings[${j}]`),
     );
+    const ups = obj(c.upgrades, `${p}.upgrades`);
+    for (const [b, lvl] of Object.entries(ups)) {
+      oneOf(b, Object.keys(BUILDINGS), `${p}.upgrades.${b}`);
+      if (
+        !Number.isInteger(lvl) ||
+        (lvl as number) < 0 ||
+        (lvl as number) > MAX_BUILDING_LEVEL - 1
+      ) {
+        fail(`${p}.upgrades.${b}`, `an integer from 0 to ${MAX_BUILDING_LEVEL - 1}`);
+      }
+    }
+    const tf = nonNeg(c.terraform, `${p}.terraform`);
+    if (tf > MAX_TERRAFORM) fail(`${p}.terraform`, `at most ${MAX_TERRAFORM}`);
     arr(c.queue, `${p}.queue`).forEach((raw2, j) => {
       const q = obj(raw2, `${p}.queue[${j}]`);
-      oneOf(q.building, Object.keys(BUILDINGS), `${p}.queue[${j}].building`);
+      const kind = oneOf(
+        q.kind,
+        ['build', 'upgrade', 'terraform'] as const,
+        `${p}.queue[${j}].kind`,
+      );
+      if (kind !== 'terraform') {
+        oneOf(q.building, Object.keys(BUILDINGS), `${p}.queue[${j}].building`);
+      }
       nonNeg(q.remaining, `${p}.queue[${j}].remaining`);
     });
   }

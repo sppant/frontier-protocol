@@ -168,7 +168,7 @@ describe('construction', () => {
     if (!res.ok) return;
     expect(res.state.factions.terran.resources.minerals).toBe(150 - BUILDINGS.mine.cost.minerals);
     expect(res.state.colonies[colony.id]!.queue).toEqual([
-      { building: 'mine', remaining: BUILDINGS.mine.buildTicks },
+      { kind: 'build', building: 'mine', remaining: BUILDINGS.mine.buildTicks },
     ]);
 
     const done = advance(res.state, BUILDINGS.mine.buildTicks);

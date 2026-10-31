@@ -18,10 +18,11 @@ export interface BuildingDef {
   upkeep: number;
 }
 
-export interface ConstructionItem {
-  building: BuildingId;
-  remaining: number;
-}
+/** One job in a colony's construction queue. */
+export type ConstructionItem =
+  | { kind: 'build'; building: BuildingId; remaining: number }
+  | { kind: 'upgrade'; building: BuildingId; remaining: number }
+  | { kind: 'terraform'; remaining: number };
 
 export interface Colony {
   id: string;
@@ -31,6 +32,10 @@ export interface Colony {
   /** Fractional; displayed floored. */
   population: number;
   buildings: BuildingId[];
+  /** Extra levels per built building (level = 1 + upgrades). */
+  upgrades: Partial<Record<BuildingId, number>>;
+  /** Habitability added by terraforming (0..MAX_TERRAFORM). */
+  terraform: number;
   queue: ConstructionItem[];
 }
 
@@ -97,7 +102,7 @@ export interface GameEvent {
 }
 
 /** Bump when the shape of GameState changes, and add a migration in persistence/save.ts. */
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 /** Score snapshot used for the standings chart. */
 export interface HistoryPoint {

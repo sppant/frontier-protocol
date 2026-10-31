@@ -166,6 +166,17 @@ describe('bots progress', () => {
   );
 });
 
+describe('late-game options', () => {
+  it('bots upgrade buildings, research the new techs and terraform', () => {
+    const s = play(allBots(2479, 'hard'), 450);
+    const colonies = Object.values(s.colonies);
+    expect(colonies.some((c) => Object.values(c.upgrades).some((n) => (n ?? 0) > 0))).toBe(true);
+    const techs = FACTION_IDS.flatMap((f) => s.factions[f].techs);
+    expect(techs).toContain('terraforming');
+    expect(colonies.some((c) => c.terraform > 0)).toBe(true);
+  });
+});
+
 describe('personalities produce different behaviour', () => {
   const run = (p: Personality) => {
     const totals = { labs: 0, hubs: 0, mines: 0, colonies: 0, explore: 0, techs: 0 };

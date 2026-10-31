@@ -50,3 +50,23 @@ export async function startMatch(page: Page, opts: MatchOptions = {}): Promise<v
   await page.getByRole('button', { name: /^Begin as/ }).click();
   await page.getByRole('region', { name: 'Galaxy map' }).waitFor();
 }
+
+/** Seed IndexedDB with a prepared save, bypassing the menu. */
+export async function installSave(page: Page, envelope: unknown) {
+  await page.goto('/');
+  await page.evaluate(
+    (env) =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('frontier-protocol', 1);
+        open.onupgradeneeded = () => open.result.createObjectStore('saves');
+        open.onsuccess = () => {
+          const tx = open.result.transaction('saves', 'readwrite');
+          tx.objectStore('saves').put(env, 'autosave');
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    envelope,
+  );
+  await page.reload();
+}
